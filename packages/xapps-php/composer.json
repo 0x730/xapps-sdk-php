@@ -1,0 +1,32 @@
+{
+  "name": "xapps/xapps-php",
+  "description": "PHP SDK for Xapps publisher/tenant backend integrations",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://gateway.0x730.com",
+  "require": {
+    "php": "^8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Xapps\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "@php test/run.php",
+    "smoke": "@php examples/smoke/smoke.php",
+    "parity": "@php test/run.php"
+  },
+  "support": {
+    "issues": "https://github.com/0x730/xapps-sdk-php/issues",
+    "source": "https://github.com/0x730/xapps-sdk-php/tree/main/packages/xapps-php"
+  },
+  "authors": [
+    {
+      "name": "Daniel Vladescu",
+      "email": "daniel.vladescu@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
