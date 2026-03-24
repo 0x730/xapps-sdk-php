@@ -1,0 +1,34 @@
+{
+  "name": "xapps/xapps-backend-kit",
+  "description": "Modular PHP backend kit for the current Xapps backend contract (tenant surface today, shared actor-adapter direction later)",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://gateway.0x730.com",
+  "require": {
+    "php": "^8.2",
+    "xapps/xapps-php": "^0.1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Xapps\\BackendKit\\": "src/"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "support": {
+    "issues": "https://github.com/0x730/xapps-sdk-php/issues",
+    "source": "https://github.com/0x730/xapps-sdk-php/tree/main/packages/xapps-backend-kit-php"
+  },
+  "authors": [
+    {
+      "name": "Daniel Vladescu",
+      "email": "daniel.vladescu@gmail.com"
+    }
+  ],
+  "scripts": {
+    "smoke": "@php examples/smoke/smoke.php"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
