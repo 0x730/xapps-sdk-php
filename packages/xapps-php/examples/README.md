@@ -1,4 +1,4 @@
-# `xapps/xapps-php` examples
+# `xapps-platform/xapps-php` examples
 
 Use these examples by intent.
 
