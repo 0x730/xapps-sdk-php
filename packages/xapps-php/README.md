@@ -1,4 +1,4 @@
-# xapps/xapps-php
+# xapps-platform/xapps-php
 
 PHP helper SDK for tenant/publisher backend integrations.
 
@@ -13,7 +13,7 @@ PHP helper SDK for tenant/publisher backend integrations.
 - Hosted gateway payment bootstrap helper (`Xapps\\HostedGatewayPaymentSession`)
 - Payment policy support helpers (`Xapps\\PaymentPolicySupport`)
 - Gateway client for host backends (API key and/or bearer token), including payment-session helpers (`Xapps\\GatewayClient`)
-- Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()` parity with `@xapps/server-sdk`
+- Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()` parity with `@xapps-platform/server-sdk`
 - Typed SDK exceptions (`Xapps\\XappsSdkError`) for callback/gateway networking + argument validation
 - Unified subject-proof verifier surface (`Xapps\\SubjectProof`) via injected verifier adapters
 
@@ -29,7 +29,7 @@ PHP helper SDK for tenant/publisher backend integrations.
     }
   ],
   "require": {
-    "xapps/xapps-php": "*@dev"
+    "xapps-platform/xapps-php": "*@dev"
   }
 }
 ```
@@ -37,20 +37,23 @@ PHP helper SDK for tenant/publisher backend integrations.
 Then:
 
 ```bash
-composer update xapps/xapps-php
+composer update xapps-platform/xapps-php
 ```
 
 ## Supported distribution modes
 
-Current supported ways to consume `xapps/xapps-php`:
+Current supported ways to consume `xapps-platform/xapps-php`:
 
 1. Local/path package during monorepo development
-2. VCS package from the platform repository, pinned to an approved tag or commit for integrator environments
+2. Packagist-facing split package mirror and/or VCS package from the public package mirror, pinned to an approved tag for integrator environments
 
-Current non-goals:
+Current release model:
 
-- public Packagist distribution is not the default supported path in this cycle
-- a separate PHP-only release repository is not maintained in this cycle
+- `0x730/xapps-sdk-php` is the public PHP source/control-plane repo
+- package distribution is intended to happen through split package mirrors:
+  - `0x730/xapps-php`
+  - `0x730/xapps-backend-kit-php`
+- Packagist should point to those split package mirrors, not the raw multi-package source repo
 
 Example VCS package install:
 
@@ -63,7 +66,7 @@ Example VCS package install:
     }
   ],
   "require": {
-    "xapps/xapps-php": "dev-xpo#<approved-commit-or-tag>"
+    "xapps-platform/xapps-php": "dev-xpo#<approved-commit-or-tag>"
   }
 }
 ```
@@ -351,11 +354,10 @@ $secret = PaymentReturn::resolveSecretFromRef(
 
 - direct local package tests now exist under `packages/xapps-php/test/`
 - Composer verification scripts now exist for `test`, `smoke`, and `parity`
-- `@xapps/server-sdk` and `xapps/xapps-php` are expected to stay functionally aligned on shipped backend integrator capabilities
+- `@xapps-platform/server-sdk` and `xapps-platform/xapps-php` are expected to stay functionally aligned on shipped backend integrator capabilities
 - supported integrator distribution is now explicit:
   - path package for local monorepo work
-  - VCS dependency pinned to an approved tag/commit for integrator environments
-  - Packagist is not the default supported channel in this cycle
+  - split package mirror tag / Packagist release for public integrator environments
 
 `PaymentHandler` accepts `secretRef` in its config. When both `secret` and
 `secretRef` are provided, `secret` takes precedence.
@@ -379,7 +381,7 @@ $handler = new PaymentHandler([
 - Current track follows additive compatibility for public SDK entry points.
 - `XappsSdkError::errorCode` values are machine-readable contract fields and should be treated as stable.
 - Breaking API behavior should ship only with an explicit major version and migration notes.
-- Payment return helpers are aligned with Node `@xapps/server-sdk` contract semantics (`xapps_payment_orchestration_v1`, plain `xapp_id`/`tool_name` return params, canonical HMAC signing format).
+- Payment return helpers are aligned with Node `@xapps-platform/server-sdk` contract semantics (`xapps_payment_orchestration_v1`, plain `xapp_id`/`tool_name` return params, canonical HMAC signing format).
 - Gateway and publisher API error code names in PHP align with Node-style machine-readable names (`GATEWAY_API_*`, `PUBLISHER_API_*`), with backward-compatible aliases retained for legacy PHP code.
 
 ## Guard blocked forward-compatibility notes
