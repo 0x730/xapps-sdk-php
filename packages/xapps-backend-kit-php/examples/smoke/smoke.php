@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../../xapps-php/src/index.php';
-require_once __DIR__ . '/../../src/functions.php';
+$autoloadPath = __DIR__ . '/../../vendor/autoload.php';
+if (is_file($autoloadPath)) {
+    require_once $autoloadPath;
+} else {
+    require_once __DIR__ . '/../../../xapps-php/src/index.php';
+    require_once __DIR__ . '/../../src/functions.php';
+}
 
 use Xapps\BackendKit\BackendKit;
 

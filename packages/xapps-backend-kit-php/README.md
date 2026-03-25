@@ -1,4 +1,4 @@
-# xapps/xapps-backend-kit
+# xapps-platform/xapps-backend-kit
 
 Modular PHP backend kit for the current Xapps backend contract.
 
@@ -14,7 +14,7 @@ Direction:
 
 This package sits above:
 
-- `xapps/xapps-php`
+- `xapps-platform/xapps-php`
 
 Use it when you want a working backend with default routes, default modes, and
 override seams, while keeping the later shared tenant/publisher direction
@@ -163,7 +163,7 @@ the package defaults locally.
 
 ## When To Drop Lower
 
-Use `xapps/xapps-php` directly only when the consumer needs a lower-level PHP
+Use `xapps-platform/xapps-php` directly only when the consumer needs a lower-level PHP
 primitive that the backend kit intentionally does not own.
 
 ## Rule

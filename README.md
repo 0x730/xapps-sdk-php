@@ -4,8 +4,8 @@ Public PHP SDK distribution repo for Xapps.
 
 Current first-wave packages:
 
-- `xapps/xapps-php`
-- `xapps/xapps-backend-kit`
+- `xapps-platform/xapps-php`
+- `xapps-platform/xapps-backend-kit`
 
 Canonical engineering source remains private. This repo is the public distribution surface under:
 
