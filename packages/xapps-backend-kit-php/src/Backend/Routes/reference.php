@@ -36,9 +36,9 @@ function xapps_backend_kit_reference_config(array $options = []): array
             '/api/installations?subjectId=...',
         ],
         'sdkPaths' => xapps_backend_kit_read_record($reference['sdkPaths'] ?? null) ?: [
-            'node' => '@xapps/server-sdk',
-            'php' => 'xapps/xapps-php',
-            'browser' => '@xapps/xapps-embed-sdk',
+            'node' => '@xapps-platform/server-sdk',
+            'php' => 'xapps-platform/xapps-php',
+            'browser' => '@xapps-platform/embed-sdk',
         ],
         'hostSurfaces' => xapps_backend_kit_read_list($reference['hostSurfaces'] ?? null) ?: [
             ['key' => 'single-panel', 'label' => 'Single panel', 'recommended_for_first_lane' => true],
