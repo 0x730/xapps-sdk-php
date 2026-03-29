@@ -2,6 +2,16 @@
 
 PHP helper SDK for tenant/publisher backend integrations.
 
+## Install
+
+```bash
+composer require xapps-platform/xapps-php
+```
+
+Use `xapps-platform/xapps-php` when you want lower-level PHP primitives for gateway, callback, payment-return, or publisher-admin flows.
+
+If you want a higher-level packaged backend contract with default routes and mode assembly, use `xapps-platform/xapps-backend-kit` instead.
+
 ## Scope (MVP)
 
 - Dispatch payload parsing (`Xapps\\Dispatch::parseRequest`)
@@ -17,7 +27,7 @@ PHP helper SDK for tenant/publisher backend integrations.
 - Typed SDK exceptions (`Xapps\\XappsSdkError`) for callback/gateway networking + argument validation
 - Unified subject-proof verifier surface (`Xapps\\SubjectProof`) via injected verifier adapters
 
-## Install (path/local during development)
+## Local path install during monorepo development
 
 ```json
 {
@@ -77,6 +87,8 @@ Practical rule for integrators:
 - treat monorepo tags/commits as the source of truth for release provenance
 - run `composer test` or `php packages/xapps-php/test/run.php` against the pinned version during integration sign-off
 
+## Verify locally
+
 Smoke check:
 
 ```bash
@@ -93,6 +105,7 @@ Or via Composer inside `packages/xapps-php`:
 
 ```bash
 composer test
+composer smoke
 ```
 
 Payment-return parity regression (golden vector vs Node SDK contract):

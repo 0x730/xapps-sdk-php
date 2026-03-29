@@ -286,6 +286,7 @@ final class GatewayClient
         $response = $this->post('/v1/widget-sessions', self::withoutNullValues([
             'installationId' => $installationId,
             'widgetId' => $widgetId,
+            'locale' => isset($input['locale']) ? (string) $input['locale'] : null,
             'xappId' => isset($input['xappId']) ? (string) $input['xappId'] : null,
             'subjectId' => isset($input['subjectId']) ? (string) $input['subjectId'] : null,
             'requestId' => isset($input['requestId']) ? (string) $input['requestId'] : null,

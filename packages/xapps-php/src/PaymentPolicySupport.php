@@ -135,8 +135,8 @@ final class PaymentPolicySupport
         $result = [
             'kind' => 'complete_payment',
             'url' => self::readString($action['url'] ?? ''),
-            'label' => self::readAnyString($action['label'] ?? null, 'Open Payment'),
-            'title' => self::readAnyString($action['title'] ?? null, 'Complete Payment'),
+            'label' => self::readLocalizedTextValue($action['label'] ?? null) ?? 'Open Payment',
+            'title' => self::readLocalizedTextValue($action['title'] ?? null) ?? 'Complete Payment',
         ];
         $target = self::readString($action['target'] ?? '');
         if ($target !== '') {
@@ -204,5 +204,21 @@ final class PaymentPolicySupport
     private static function readLowerString($value): string
     {
         return strtolower(self::readString($value));
+    }
+
+    /** @return array<string,mixed>|string|null */
+    private static function readLocalizedTextValue($value)
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            return $trimmed !== '' ? $trimmed : null;
+        }
+        if (!is_array($value)) return null;
+        foreach ($value as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return $value;
+            }
+        }
+        return null;
     }
 }

@@ -63,4 +63,19 @@ return [
             ]));
         },
     ],
+    [
+        'name' => 'PaymentPolicySupport preserves localized action text',
+        'run' => static function (): void {
+            xappsPhpAssertSame([
+                'kind' => 'complete_payment',
+                'url' => 'https://tenant.example.test/pay',
+                'label' => ['en' => 'Pay now', 'ro' => 'Plătește acum'],
+                'title' => ['en' => 'Complete payment', 'ro' => 'Finalizează plata'],
+            ], PaymentPolicySupport::buildPaymentGuardAction([
+                'url' => 'https://tenant.example.test/pay',
+                'label' => ['en' => 'Pay now', 'ro' => 'Plătește acum'],
+                'title' => ['en' => 'Complete payment', 'ro' => 'Finalizează plata'],
+            ]));
+        },
+    ],
 ];
