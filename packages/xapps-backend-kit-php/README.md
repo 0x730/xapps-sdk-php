@@ -2,6 +2,18 @@
 
 Modular PHP backend kit for the current Xapps backend contract.
 
+## Install
+
+```bash
+composer require xapps-platform/xapps-backend-kit
+```
+
+This package depends on `xapps-platform/xapps-php` and sits above it.
+
+Use it when you want a higher-level packaged backend contract with default routes, mode assembly, payment runtime composition, and override seams.
+
+Use `xapps-platform/xapps-php` directly only when you need lower-level PHP primitives that the backend kit intentionally does not own.
+
 Current public surface:
 
 - backend composition for the shipped backend contract
@@ -27,15 +39,14 @@ public entry surface stable and split internal package code behind it.
 
 Consumer rule:
 
-- load `packages/xapps-backend-kit-php/src/functions.php`
+- prefer Composer autoload plus the package file autoload
 - use the package entry surface
 - do not wire individual `src/...` files directly in consuming apps
 
 Example:
 
 ```php
-require_once $repoRoot . '/packages/xapps-php/src/index.php';
-require_once $repoRoot . '/packages/xapps-backend-kit-php/src/functions.php';
+require_once __DIR__ . "/vendor/autoload.php";
 
 use Xapps\BackendKit\BackendKit;
 ```
@@ -87,6 +98,16 @@ Current route surface includes:
 - guard
 - subject profiles
 
+## Minimal usage
+
+```php
+<?php
+
+require_once __DIR__ . "/vendor/autoload.php";
+
+use Xapps\BackendKit\BackendKit;
+```
+
 Current default mode tree includes:
 
 - `gateway_managed`
@@ -120,6 +141,17 @@ surface, including:
 - `/api/create-widget-session`
 - lifecycle routes under `/api/install*`
 - bridge routes under `/api/bridge/*`
+
+Hosted-integrator session expectations are the same as in the Node backend kit:
+
+- browser hosts use a short-lived `bootstrapToken`
+- widget sessions renew through `/api/bridge/token-refresh`
+- bootstrap renewal should re-run bootstrap instead of treating `subjectId` alone as durable proof
+- terminal widget-session failure should surface at the host shell layer, not as a raw iframe error
+
+The PHP runtime should therefore be documented and reasoned about as an
+implementation variant of the same hosted-integrator/session contract, not as a
+separate feature line.
 
 ## What Should Stay Local
 
@@ -184,3 +216,9 @@ Keep internals:
 
 Node and PHP should keep the same backend behavior in the end. Differences
 should be runtime-adapter concerns, not separate platform feature lines.
+
+## Verify locally
+
+```bash
+composer smoke
+```

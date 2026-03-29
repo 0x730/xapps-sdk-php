@@ -17,6 +17,40 @@ function xapps_backend_kit_payment_numeric_amount(mixed $amount): mixed
     return $amount;
 }
 
+function xapps_backend_kit_resolve_localized_text(mixed $value, string $locale, string $fallback = 'en'): string
+{
+    if (is_string($value)) {
+        $trimmed = trim($value);
+        return $trimmed !== '' ? $trimmed : '';
+    }
+    if (!is_array($value)) return '';
+    $normalized = trim(str_replace('_', '-', $locale));
+    $normalized = $normalized !== '' ? $normalized : $fallback;
+    $candidates = [$normalized];
+    $dashPos = strpos($normalized, '-');
+    if ($dashPos !== false && $dashPos > 0) {
+        $candidates[] = substr($normalized, 0, $dashPos);
+    }
+    if (!in_array($fallback, $candidates, true)) {
+        $candidates[] = $fallback;
+    }
+    if (!in_array('en', $candidates, true)) {
+        $candidates[] = 'en';
+    }
+    foreach ($candidates as $candidate) {
+        $resolved = $value[$candidate] ?? null;
+        if (is_string($resolved) && trim($resolved) !== '') {
+            return trim($resolved);
+        }
+    }
+    foreach ($value as $resolved) {
+        if (is_string($resolved) && trim($resolved) !== '') {
+            return trim($resolved);
+        }
+    }
+    return '';
+}
+
 function xapps_backend_kit_build_payment_policy_input(array $payload, array $app, array $modeMeta): array
 {
     $context = PaymentPolicySupport::resolveMergedPaymentGuardContext($payload);
@@ -139,6 +173,7 @@ function xapps_backend_kit_build_payment_policy_blocked_result(array $input, arr
     $currency = xapps_backend_kit_read_string($input['currency'] ?? null, 'USD');
     $plainStatus = xapps_backend_kit_read_string($input['plainStatus'] ?? null);
     $verificationFailure = xapps_backend_kit_read_record($input['verificationFailure'] ?? null);
+    $locale = xapps_backend_kit_read_string($context['locale'] ?? null, $payload['locale'] ?? null, 'en');
 
     $paymentUrlResult = BackendKit::buildModeHostedGatewayPaymentUrl($app, [
         'payload' => $payload,
@@ -188,7 +223,10 @@ function xapps_backend_kit_build_payment_policy_blocked_result(array $input, arr
         ),
         'message' => ($verificationFailure['ok'] ?? true) === false
             ? 'Payment verification failed'
-            : xapps_backend_kit_read_string($policy['message'] ?? null, 'Payment is required before continuing.'),
+            : xapps_backend_kit_read_string(
+                xapps_backend_kit_resolve_localized_text($policy['message'] ?? null, $locale),
+                'Payment is required before continuing.',
+            ),
         'action' => $action,
         'details' => $details,
     ];
