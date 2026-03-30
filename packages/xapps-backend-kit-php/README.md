@@ -32,6 +32,19 @@ Use it when you want a working backend with default routes, default modes, and
 override seams, while keeping the later shared tenant/publisher direction
 open.
 
+For request-capable publisher-rendered widgets, use the package layer to
+verify browser widget context server-side before exposing private runtime
+behavior:
+
+```php
+$verified = BackendKit::verifyBrowserWidgetContext($gatewayClient, [
+    'hostOrigin' => 'https://tenant.example.test',
+    'installationId' => 'inst_123',
+    'bindToolName' => 'submit_form',
+    'subjectId' => 'sub_123',
+]);
+```
+
 This is now a real package, not a placeholder or extraction stub. Keep the
 public entry surface stable and split internal package code behind it.
 
@@ -64,6 +77,7 @@ The current package surface provides:
 - default mode tree
 - payment runtime assembly
 - host-proxy service assembly
+- request-widget bootstrap verification passthrough
 - subject-profile sourcing hooks
 
 Internal package structure is intentionally modular:

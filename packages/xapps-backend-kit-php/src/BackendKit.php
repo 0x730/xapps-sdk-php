@@ -132,6 +132,16 @@ final class BackendKit
         return BackendHostProxy::createHostProxyService($config, $normalizedOptions, $deps);
     }
 
+    public static function verifyBrowserWidgetContext(object $gatewayClient, array $input): array
+    {
+        if (!method_exists($gatewayClient, 'verifyBrowserWidgetContext')) {
+            throw new \InvalidArgumentException('gatewayClient must implement verifyBrowserWidgetContext');
+        }
+        /** @var callable(array<string,mixed>):array<string,mixed> $callable */
+        $callable = [$gatewayClient, 'verifyBrowserWidgetContext'];
+        return $callable($input);
+    }
+
     public static function registerHostReferenceModuleRoutes(array &$routes, array $app, array $options = [], array $deps = []): void
     {
         BackendModules::registerHostReferenceModuleRoutes($routes, $app, $options, $deps);

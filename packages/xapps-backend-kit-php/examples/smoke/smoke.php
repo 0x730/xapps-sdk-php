@@ -90,6 +90,28 @@ $hostProxy = BackendKit::createHostProxyService([
 assertTrue(($hostProxy->gatewayClient->baseUrl ?? '') === 'https://gateway.example.test', 'host proxy gateway url mismatch');
 assertTrue(count($hostProxy->hostOptions['hostModes'] ?? []) === 1, 'host proxy modes mismatch');
 
+$verified = BackendKit::verifyBrowserWidgetContext(
+    new class {
+        /** @param array<string,mixed> $input @return array<string,mixed> */
+        public function verifyBrowserWidgetContext(array $input): array
+        {
+            return [
+                'verified' => true,
+                'latestRequestId' => 'req_latest_123',
+                'result' => $input,
+            ];
+        }
+    },
+    [
+        'hostOrigin' => 'https://tenant.example.test',
+        'installationId' => 'inst_123',
+        'bindToolName' => 'submit_certificate_request_async',
+        'subjectId' => 'sub_123',
+    ],
+);
+assertTrue(($verified['verified'] ?? false) === true, 'widget bootstrap verify mismatch');
+assertTrue(($verified['latestRequestId'] ?? '') === 'req_latest_123', 'widget bootstrap request mismatch');
+
 $app = BackendKit::createPlainPhpApp([
     'gatewayUrl' => 'https://gateway.example.test',
     'gatewayApiKey' => 'gateway_key',
