@@ -96,6 +96,21 @@ return [
                 'widget payload should omit null resultPresentation',
             );
 
+            TestCurlShim::reset();
+            $verified = $client->verifyBrowserWidgetContext([
+                'hostOrigin' => 'http://localhost:3312',
+                'installationId' => 'inst_fixture_1',
+                'bindToolName' => 'submit_certificate_request_async',
+                'subjectId' => (string) ($resolved['subjectId'] ?? ''),
+            ]);
+            xappsPhpAssertTrue(($verified['verified'] ?? false) === true, 'widget bootstrap verify should pass');
+            xappsPhpAssertContains('req_latest_', (string) ($verified['latestRequestId'] ?? ''), 'latest request id should be returned');
+            $verifyRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('/v1/requests/latest', $verifyRequest['path'] ?? null, 'verify path mismatch');
+            xappsPhpAssertSame('http://localhost:3312', $verifyRequest['headers']['origin'] ?? null, 'verify origin mismatch');
+            xappsPhpAssertSame('inst_fixture_1', $verifyRequest['query']['installationId'] ?? null, 'verify installation mismatch');
+            xappsPhpAssertSame('submit_certificate_request_async', $verifyRequest['query']['toolName'] ?? null, 'verify tool mismatch');
+
             $installations = $client->listInstallations([
                 'subjectId' => (string) ($resolved['subjectId'] ?? ''),
             ]);

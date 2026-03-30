@@ -22,7 +22,7 @@ If you want a higher-level packaged backend contract with default routes and mod
 - Managed gateway session shaping helpers (`Xapps\\ManagedGatewayPaymentSession`)
 - Hosted gateway payment bootstrap helper (`Xapps\\HostedGatewayPaymentSession`)
 - Payment policy support helpers (`Xapps\\PaymentPolicySupport`)
-- Gateway client for host backends (API key and/or bearer token), including payment-session helpers (`Xapps\\GatewayClient`)
+- Gateway client for host backends (API key and/or bearer token), including payment-session helpers and request-widget bootstrap verification (`Xapps\\GatewayClient`)
 - Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()` parity with `@xapps-platform/server-sdk`
 - Typed SDK exceptions (`Xapps\\XappsSdkError`) for callback/gateway networking + argument validation
 - Unified subject-proof verifier surface (`Xapps\\SubjectProof`) via injected verifier adapters
@@ -125,6 +125,17 @@ Minimal host proxy example:
 
 ```bash
 php packages/xapps-php/examples/host-proxy/minimal.php
+```
+
+Request-widget bootstrap verification helper:
+
+```php
+$verified = $gateway->verifyBrowserWidgetContext([
+    'hostOrigin' => 'https://tenant.example.test',
+    'installationId' => 'inst_123',
+    'bindToolName' => 'submit_form',
+    'subjectId' => 'sub_123',
+]);
 ```
 
 Higher-level tenant/publisher backend kits are intentionally not part of the

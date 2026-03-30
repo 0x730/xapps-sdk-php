@@ -174,6 +174,13 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'GET' && $path === '/v1/requests/latest') {
+            return self::json(200, [
+                'result' => [
+                    'requestId' => 'req_latest_' . substr(md5(json_encode($query)), 0, 8),
+                ],
+            ]);
+        }
         if ($method === 'GET' && $path === '/v1/installations') {
             return self::json(200, [
                 'result' => [

@@ -322,6 +322,41 @@ final class GatewayClient
         return $result;
     }
 
+    /** @param array<string,mixed> $input @return array{verified:bool,latestRequestId:?string,result:array<string,mixed>} */
+    public function verifyBrowserWidgetContext(array $input): array
+    {
+        $hostOrigin = trim((string) ($input['hostOrigin'] ?? $input['host_origin'] ?? ''));
+        if ($hostOrigin === '') {
+            throw new XappsSdkError(XappsSdkError::INVALID_ARGUMENT, 'hostOrigin is required');
+        }
+
+        $query = [];
+        $installationId = trim((string) ($input['installationId'] ?? $input['installation_id'] ?? ''));
+        $toolName = trim((string) ($input['bindToolName'] ?? $input['bind_tool_name'] ?? $input['toolName'] ?? $input['tool_name'] ?? ''));
+        $subjectId = trim((string) ($input['subjectId'] ?? $input['subject_id'] ?? ''));
+        if ($installationId !== '') $query['installationId'] = $installationId;
+        if ($toolName !== '') $query['toolName'] = $toolName;
+        if ($subjectId !== '') $query['subjectId'] = $subjectId;
+
+        $response = $this->get('/v1/requests/latest', $query, ['Origin' => $hostOrigin]);
+        $payload = $this->extractGatewayResult($response, 'verifyBrowserWidgetContext');
+        if (!is_array($payload)) {
+            throw new XappsSdkError(
+                XappsSdkError::GATEWAY_API_INVALID_RESPONSE,
+                'Gateway verifyBrowserWidgetContext returned malformed response',
+                $response['status'],
+                false,
+                ['payload' => $payload],
+            );
+        }
+        $latestRequestId = trim((string) ($payload['requestId'] ?? $payload['id'] ?? ''));
+        return [
+            'verified' => true,
+            'latestRequestId' => $latestRequestId !== '' ? $latestRequestId : null,
+            'result' => $payload,
+        ];
+    }
+
     /** @param array<string,mixed> $input @return array{items:array<int,array<string,mixed>>} */
     public function listInstallations(array $input = []): array
     {
