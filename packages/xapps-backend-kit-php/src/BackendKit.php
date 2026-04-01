@@ -142,6 +142,53 @@ final class BackendKit
         return $callable($input);
     }
 
+    public static function normalizeWidgetBootstrapAllowedOrigins(mixed $value): array
+    {
+        $entries = self::readList($value);
+        $normalized = [];
+        foreach ($entries as $entry) {
+            $origin = self::normalizeOrigin(self::readString($entry));
+            if ($origin === '') {
+                continue;
+            }
+            $normalized[$origin] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    public static function evaluateWidgetBootstrapOriginPolicy(array $input): array
+    {
+        $hostOrigin = self::normalizeOrigin(self::readString($input['hostOrigin'] ?? $input['host_origin'] ?? ''));
+        $allowedOrigins = self::normalizeWidgetBootstrapAllowedOrigins($input['allowedOrigins'] ?? $input['allowed_origins'] ?? []);
+
+        if ($hostOrigin === '') {
+            return [
+                'ok' => false,
+                'code' => 'HOST_ORIGIN_REQUIRED',
+                'message' => 'Host origin is required to verify browser widget context',
+                'hostOrigin' => null,
+                'allowedOrigins' => $allowedOrigins,
+            ];
+        }
+
+        if ($allowedOrigins !== [] && !in_array($hostOrigin, $allowedOrigins, true)) {
+            return [
+                'ok' => false,
+                'code' => 'HOST_ORIGIN_NOT_ALLOWED',
+                'message' => 'Host origin is not allowed for widget bootstrap verification',
+                'hostOrigin' => $hostOrigin,
+                'allowedOrigins' => $allowedOrigins,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'hostOrigin' => $hostOrigin,
+            'allowedOrigins' => $allowedOrigins,
+        ];
+    }
+
     public static function registerHostReferenceModuleRoutes(array &$routes, array $app, array $options = [], array $deps = []): void
     {
         BackendModules::registerHostReferenceModuleRoutes($routes, $app, $options, $deps);
@@ -165,5 +212,32 @@ final class BackendKit
     public static function mapHostedSessionResult(array $input): array
     {
         return BackendPaymentRuntime::mapHostedSessionResult($input);
+    }
+
+    private static function normalizeOrigin(string $value): string
+    {
+        $raw = trim($value);
+        if ($raw === '') {
+            return '';
+        }
+
+        $parts = parse_url($raw);
+        if (!is_array($parts)) {
+            return '';
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($scheme === '' || $host === '') {
+            return '';
+        }
+
+        $port = isset($parts['port']) ? (int) $parts['port'] : null;
+        $isDefaultPort =
+            $port === null ||
+            ($scheme === 'https' && $port === 443) ||
+            ($scheme === 'http' && $port === 80);
+
+        return $scheme . '://' . $host . ($isDefaultPort ? '' : ':' . $port);
     }
 }

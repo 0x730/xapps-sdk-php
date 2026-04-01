@@ -37,13 +37,57 @@ verify browser widget context server-side before exposing private runtime
 behavior:
 
 ```php
+$originPolicy = BackendKit::evaluateWidgetBootstrapOriginPolicy([
+    'hostOrigin' => $request['body']['hostOrigin'] ?? null,
+    'allowedOrigins' => $config['widgetBootstrap']['allowedOrigins'] ?? [],
+]);
+
+if (!($originPolicy['ok'] ?? false)) {
+    http_response_code(($originPolicy['code'] ?? '') === 'HOST_ORIGIN_REQUIRED' ? 400 : 403);
+    echo json_encode([
+        'ok' => false,
+        'error' => [
+            'code' => $originPolicy['code'] ?? 'HOST_ORIGIN_NOT_ALLOWED',
+            'message' => $originPolicy['message'] ?? 'Widget bootstrap origin rejected',
+        ],
+    ]);
+    return;
+}
+
 $verified = BackendKit::verifyBrowserWidgetContext($gatewayClient, [
-    'hostOrigin' => 'https://tenant.example.test',
+    'hostOrigin' => $originPolicy['hostOrigin'],
     'installationId' => 'inst_123',
     'bindToolName' => 'submit_form',
     'subjectId' => 'sub_123',
+    'bootstrapTicket' => $request['body']['bootstrapTicket'] ?? null,
 ]);
 ```
+
+Recommended shared local config contract for publisher-rendered bootstrap
+routes:
+
+- `widgetBootstrap.allowedOrigins`
+- optional app env:
+  - `XAPPS_WIDGET_ALLOWED_ORIGINS=https://host.example.test,https://host-b.example.test`
+
+This stays local/app-owned on purpose. The package helper standardizes the
+policy behavior without forcing a framework-specific env contract.
+
+Recommended request-widget posture:
+
+- keep the widget asset URL as a public/bootstrap shell
+- keep request-capable UI blocked until backend verification succeeds
+- do not place secrets or durable bearer tokens in manifest widget URLs
+- direct raw browser hits should stay blocked instead of exposing private runtime
+
+Optional stronger bootstrap transport already supported:
+
+- `widgets[].config.xapps.bootstrap_transport = "signed_ticket"`
+- current first slice reuses the short-lived signed widget token as a bootstrap
+  ticket and carries it in the iframe URL hash
+- browser widget code can forward it to your backend as `bootstrapTicket`
+- the PHP backend-kit passthrough accepts that field without changing the
+  current default/public bootstrap contract
 
 This is now a real package, not a placeholder or extraction stub. Keep the
 public entry surface stable and split internal package code behind it.

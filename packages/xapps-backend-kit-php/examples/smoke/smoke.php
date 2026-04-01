@@ -112,6 +112,20 @@ $verified = BackendKit::verifyBrowserWidgetContext(
 assertTrue(($verified['verified'] ?? false) === true, 'widget bootstrap verify mismatch');
 assertTrue(($verified['latestRequestId'] ?? '') === 'req_latest_123', 'widget bootstrap request mismatch');
 
+$widgetBootstrapPolicy = BackendKit::evaluateWidgetBootstrapOriginPolicy([
+    'hostOrigin' => 'https://tenant.example.test/embed',
+    'allowedOrigins' => 'https://tenant.example.test,https://tenant-b.example.test',
+]);
+assertTrue(($widgetBootstrapPolicy['ok'] ?? false) === true, 'widget bootstrap policy should allow normalized host');
+assertTrue(($widgetBootstrapPolicy['hostOrigin'] ?? '') === 'https://tenant.example.test', 'widget bootstrap policy normalized host mismatch');
+
+$widgetBootstrapRejected = BackendKit::evaluateWidgetBootstrapOriginPolicy([
+    'hostOrigin' => 'https://tenant-c.example.test',
+    'allowedOrigins' => ['https://tenant.example.test'],
+]);
+assertTrue(($widgetBootstrapRejected['ok'] ?? true) === false, 'widget bootstrap policy should reject unknown host origin');
+assertTrue(($widgetBootstrapRejected['code'] ?? '') === 'HOST_ORIGIN_NOT_ALLOWED', 'widget bootstrap policy rejection mismatch');
+
 $app = BackendKit::createPlainPhpApp([
     'gatewayUrl' => 'https://gateway.example.test',
     'gatewayApiKey' => 'gateway_key',
