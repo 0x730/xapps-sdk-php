@@ -326,6 +326,7 @@ final class GatewayClient
     public function verifyBrowserWidgetContext(array $input): array
     {
         $hostOrigin = trim((string) ($input['hostOrigin'] ?? $input['host_origin'] ?? ''));
+        $bootstrapTicket = trim((string) ($input['bootstrapTicket'] ?? $input['bootstrap_ticket'] ?? ''));
         if ($hostOrigin === '') {
             throw new XappsSdkError(XappsSdkError::INVALID_ARGUMENT, 'hostOrigin is required');
         }
@@ -338,7 +339,12 @@ final class GatewayClient
         if ($toolName !== '') $query['toolName'] = $toolName;
         if ($subjectId !== '') $query['subjectId'] = $subjectId;
 
-        $response = $this->get('/v1/requests/latest', $query, ['Origin' => $hostOrigin]);
+        $headers = ['Origin' => $hostOrigin];
+        if ($bootstrapTicket !== '') {
+            $headers['Authorization'] = 'Bearer ' . $bootstrapTicket;
+        }
+
+        $response = $this->get('/v1/requests/latest', $query, $headers);
         $payload = $this->extractGatewayResult($response, 'verifyBrowserWidgetContext');
         if (!is_array($payload)) {
             throw new XappsSdkError(

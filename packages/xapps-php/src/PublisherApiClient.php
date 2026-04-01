@@ -191,6 +191,133 @@ final class PublisherApiClient
         return ['items' => $payload['items']];
     }
 
+    /** @param array{subjectId:string,xappId:string,publisherUserId:string,realm?:string,metadata?:array<string,mixed>} $input @return array{success:bool,link_id?:string} */
+    public function completeLink(array $input): array
+    {
+        $subjectId = trim((string) ($input['subjectId'] ?? ''));
+        $xappId = trim((string) ($input['xappId'] ?? ''));
+        $publisherUserId = trim((string) ($input['publisherUserId'] ?? ''));
+        if ($subjectId === '' || $xappId === '' || $publisherUserId === '') {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'subjectId, xappId, and publisherUserId are required',
+                null,
+                false,
+                ['input' => $input],
+            );
+        }
+        $payload = [
+            'subjectId' => $subjectId,
+            'xappId' => $xappId,
+            'publisherUserId' => $publisherUserId,
+        ];
+        if (isset($input['realm']) && trim((string) $input['realm']) !== '') {
+            $payload['realm'] = trim((string) $input['realm']);
+        }
+        if (isset($input['metadata']) && is_array($input['metadata'])) {
+            $payload['metadata'] = $input['metadata'];
+        }
+        $result = $this->postJson('/v1/publisher/links/complete', $payload);
+        if (!isset($result['success']) || !is_bool($result['success'])) {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'Publisher completeLink returned malformed response',
+                null,
+                false,
+                ['payload' => $result],
+            );
+        }
+        return $result;
+    }
+
+    /** @param array{subjectId:string,xappId:string,publisherUserId:string,reason?:string} $input @return array{revoked:bool,alreadyRevoked?:bool,deleted?:int} */
+    public function revokeLink(array $input): array
+    {
+        $subjectId = trim((string) ($input['subjectId'] ?? ''));
+        $xappId = trim((string) ($input['xappId'] ?? ''));
+        $publisherUserId = trim((string) ($input['publisherUserId'] ?? ''));
+        if ($subjectId === '' || $xappId === '' || $publisherUserId === '') {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'subjectId, xappId, and publisherUserId are required',
+                null,
+                false,
+                ['input' => $input],
+            );
+        }
+        $payload = [
+            'subjectId' => $subjectId,
+            'xappId' => $xappId,
+            'publisherUserId' => $publisherUserId,
+        ];
+        if (isset($input['reason']) && trim((string) $input['reason']) !== '') {
+            $payload['reason'] = trim((string) $input['reason']);
+        }
+        $result = $this->postJson('/v1/publisher/links/revoke', $payload);
+        if (!isset($result['revoked']) || !is_bool($result['revoked'])) {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'Publisher revokeLink returned malformed response',
+                null,
+                false,
+                ['payload' => $result],
+            );
+        }
+        return $result;
+    }
+
+    /** @return array{linked:bool,reason?:string,publisherUserId?:string,link_id?:string} */
+    public function getLinkStatus(): array
+    {
+        $payload = $this->getJson('/v1/publisher/links/status');
+        if (!isset($payload['linked']) || !is_bool($payload['linked'])) {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'Publisher getLinkStatus returned malformed response',
+                null,
+                false,
+                ['payload' => $payload],
+            );
+        }
+        return $payload;
+    }
+
+    /** @param array{publisher_id:string,scopes?:array<int,string>,link_required?:bool} $input @return array{vendor_assertion:string,issuer?:string,subject_id?:string,link_id?:string,expires_in?:int} */
+    public function exchangeBridgeToken(array $input): array
+    {
+        $publisherId = trim((string) ($input['publisher_id'] ?? ''));
+        if ($publisherId === '') {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'publisher_id is required',
+                null,
+                false,
+                ['input' => $input],
+            );
+        }
+        $payload = ['publisher_id' => $publisherId];
+        if (isset($input['scopes']) && is_array($input['scopes'])) {
+            $payload['scopes'] = array_values(array_filter(array_map(
+                static fn(mixed $value): string => trim((string) $value),
+                $input['scopes'],
+            ), static fn(string $value): bool => $value !== ''));
+        }
+        if (isset($input['link_required'])) {
+            $payload['link_required'] = (bool) $input['link_required'];
+        }
+        $result = $this->postJson('/v1/publisher/bridge/token', $payload);
+        if (!isset($result['vendor_assertion']) || !is_string($result['vendor_assertion']) || trim($result['vendor_assertion']) === '') {
+            throw new XappsSdkError(
+                XappsSdkError::PUBLISHER_API_INVALID_RESPONSE,
+                'Publisher exchangeBridgeToken returned malformed response',
+                null,
+                false,
+                ['payload' => $result],
+            );
+        }
+        return $result;
+    }
+
     /** @param array<string,mixed> $body @return array<string,mixed> */
     private function postJson(string $path, array $body): array
     {

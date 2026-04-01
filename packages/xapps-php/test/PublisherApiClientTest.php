@@ -45,4 +45,42 @@ return [
             xappsPhpAssertSame('cred_endpoint_ver_demo', (string) ($credentials['items'][0]['id'] ?? ''));
         },
     ],
+    [
+        'name' => 'PublisherApiClient covers linking and bridge helpers',
+        'run' => static function (): void {
+            $client = new PublisherApiClient(xappsPhpTestBaseUrl(), '', 20, [
+                'token' => 'publisher-token',
+            ]);
+
+            $completed = $client->completeLink([
+                'subjectId' => 'sub_123',
+                'xappId' => 'xapp_demo',
+                'publisherUserId' => 'publisher-user-123',
+                'metadata' => ['email' => 'demo@example.test'],
+            ]);
+            xappsPhpAssertSame(true, (bool) ($completed['success'] ?? false));
+            xappsPhpAssertSame('lnk_fixture', (string) ($completed['link_id'] ?? ''));
+
+            $status = $client->getLinkStatus();
+            xappsPhpAssertSame(true, (bool) ($status['linked'] ?? false));
+            xappsPhpAssertSame('publisher-user-123', (string) ($status['publisherUserId'] ?? ''));
+
+            $revoked = $client->revokeLink([
+                'subjectId' => 'sub_123',
+                'xappId' => 'xapp_demo',
+                'publisherUserId' => 'publisher-user-123',
+                'reason' => 'user_disconnect',
+            ]);
+            xappsPhpAssertSame(true, (bool) ($revoked['revoked'] ?? false));
+            xappsPhpAssertSame(1, (int) ($revoked['deleted'] ?? 0));
+
+            $bridge = $client->exchangeBridgeToken([
+                'publisher_id' => 'pub_demo',
+                'scopes' => ['publisher.api:read', 'publisher.api:read', ''],
+                'link_required' => true,
+            ]);
+            xappsPhpAssertSame('vendor_assertion_fixture', (string) ($bridge['vendor_assertion'] ?? ''));
+            xappsPhpAssertSame('lnk_fixture', (string) ($bridge['link_id'] ?? ''));
+        },
+    ],
 ];

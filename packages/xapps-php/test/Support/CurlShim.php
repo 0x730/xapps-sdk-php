@@ -337,6 +337,35 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'POST' && $path === '/v1/publisher/links/complete') {
+            return self::json(200, [
+                'success' => true,
+                'link_id' => 'lnk_fixture',
+            ]);
+        }
+        if ($method === 'POST' && $path === '/v1/publisher/links/revoke') {
+            return self::json(200, [
+                'revoked' => true,
+                'alreadyRevoked' => false,
+                'deleted' => 1,
+            ]);
+        }
+        if ($method === 'GET' && $path === '/v1/publisher/links/status') {
+            return self::json(200, [
+                'linked' => true,
+                'publisherUserId' => 'publisher-user-123',
+                'link_id' => 'lnk_fixture',
+            ]);
+        }
+        if ($method === 'POST' && $path === '/v1/publisher/bridge/token') {
+            return self::json(200, [
+                'vendor_assertion' => 'vendor_assertion_fixture',
+                'issuer' => 'xapps',
+                'subject_id' => 'sub_fixture',
+                'link_id' => 'lnk_fixture',
+                'expires_in' => 900,
+            ]);
+        }
         return self::json(404, [
             'message' => 'Not found',
             'path' => $path,

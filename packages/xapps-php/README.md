@@ -23,7 +23,7 @@ If you want a higher-level packaged backend contract with default routes and mod
 - Hosted gateway payment bootstrap helper (`Xapps\\HostedGatewayPaymentSession`)
 - Payment policy support helpers (`Xapps\\PaymentPolicySupport`)
 - Gateway client for host backends (API key and/or bearer token), including payment-session helpers and request-widget bootstrap verification (`Xapps\\GatewayClient`)
-- Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()` parity with `@xapps-platform/server-sdk`
+- Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()`, publisher linking helpers, and bridge-token exchange parity with `@xapps-platform/server-sdk`
 - Typed SDK exceptions (`Xapps\\XappsSdkError`) for callback/gateway networking + argument validation
 - Unified subject-proof verifier surface (`Xapps\\SubjectProof`) via injected verifier adapters
 
@@ -135,6 +135,44 @@ $verified = $gateway->verifyBrowserWidgetContext([
     'installationId' => 'inst_123',
     'bindToolName' => 'submit_form',
     'subjectId' => 'sub_123',
+    'bootstrapTicket' => 'bst_123',
+]);
+```
+
+Recommended request-widget posture:
+
+- keep the publisher widget asset URL as a public/bootstrap shell
+- block request-capable runtime until the short-lived widget token and context
+  are verified server-side
+- do not put secrets or durable tokens in the manifest URL
+- direct raw browser hits should stay blocked instead of unlocking private
+  request/runtime behavior
+
+Optional stronger bootstrap transport already supported:
+
+- `widgets[].config.xapps.bootstrap_transport = "signed_ticket"`
+- current first slice reuses the short-lived signed widget token as a bootstrap
+  ticket and carries it in the iframe URL hash
+- browser widget code can forward it to the backend as `bootstrapTicket`
+- `GatewayClient::verifyBrowserWidgetContext(...)` accepts both:
+  - `bootstrapTicket`
+  - `bootstrap_ticket`
+
+Publisher linking + bridge helpers:
+
+```php
+$publisher = new PublisherApiClient('http://localhost:3000', 'publisher-api-key');
+$publisher->completeLink([
+    'subjectId' => 'sub_123',
+    'xappId' => 'xapp_123',
+    'publisherUserId' => 'publisher-user-123',
+    'metadata' => ['email' => 'user@example.test'],
+]);
+
+$status = $publisher->getLinkStatus();
+$bridge = $publisher->exchangeBridgeToken([
+    'publisher_id' => 'pub_123',
+    'scopes' => ['publisher.api:read'],
 ]);
 ```
 

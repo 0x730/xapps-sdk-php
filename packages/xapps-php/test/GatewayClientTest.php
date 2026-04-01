@@ -111,6 +111,18 @@ return [
             xappsPhpAssertSame('inst_fixture_1', $verifyRequest['query']['installationId'] ?? null, 'verify installation mismatch');
             xappsPhpAssertSame('submit_certificate_request_async', $verifyRequest['query']['toolName'] ?? null, 'verify tool mismatch');
 
+            TestCurlShim::reset();
+            $verifiedWithBootstrapTicket = $client->verifyBrowserWidgetContext([
+                'hostOrigin' => 'http://localhost:3312',
+                'installationId' => 'inst_fixture_1',
+                'bindToolName' => 'submit_certificate_request_async',
+                'subjectId' => (string) ($resolved['subjectId'] ?? ''),
+                'bootstrapTicket' => 'bst_fixture_123',
+            ]);
+            xappsPhpAssertTrue(($verifiedWithBootstrapTicket['verified'] ?? false) === true, 'widget bootstrap verify with bootstrapTicket should pass');
+            $verifyTicketRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('Bearer bst_fixture_123', $verifyTicketRequest['headers']['authorization'] ?? null, 'verify bootstrap ticket auth mismatch');
+
             $installations = $client->listInstallations([
                 'subjectId' => (string) ($resolved['subjectId'] ?? ''),
             ]);
