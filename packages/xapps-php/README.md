@@ -22,10 +22,21 @@ If you want a higher-level packaged backend contract with default routes and mod
 - Managed gateway session shaping helpers (`Xapps\\ManagedGatewayPaymentSession`)
 - Hosted gateway payment bootstrap helper (`Xapps\\HostedGatewayPaymentSession`)
 - Payment policy support helpers (`Xapps\\PaymentPolicySupport`)
-- Gateway client for host backends (API key and/or bearer token), including payment-session helpers and request-widget bootstrap verification (`Xapps\\GatewayClient`)
+- Gateway client for host backends (API key and/or bearer token), including payment-session helpers, low-level XMS monetization lifecycle helpers (catalog, access, subscription, wallet, purchase-intent, and subscription-contract routes), and request-widget bootstrap verification (`Xapps\\GatewayClient`)
 - Publisher admin API client for publisher backends (`Xapps\\PublisherApiClient`), including `listClients()`, publisher linking helpers, and bridge-token exchange parity with `@xapps-platform/server-sdk`
 - Typed SDK exceptions (`Xapps\\XappsSdkError`) for callback/gateway networking + argument validation
 - Unified subject-proof verifier surface (`Xapps\\SubjectProof`) via injected verifier adapters
+
+Current `GatewayClient` XMS helpers include:
+
+- `getXappMonetizationCatalog(...)`
+- `getXappMonetizationAccess(...)`
+- `getXappCurrentSubscription(...)`
+- `listXappWalletAccounts(...)`
+- `listXappWalletLedger(...)`
+- `consumeXappWalletCredits(...)`
+- purchase-intent / transaction / payment-session lifecycle helpers
+- subscription-contract reconcile / cancel / refresh helpers
 
 ## Local path install during monorepo development
 

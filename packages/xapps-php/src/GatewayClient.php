@@ -458,6 +458,240 @@ final class GatewayClient
         return is_array($payload) ? $payload : [];
     }
 
+    /** @return array<string,mixed> */
+    public function getXappMonetizationCatalog(string $xappId): array
+    {
+        $resolvedXappId = self::requireNonEmptyString($xappId, 'xappId');
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization');
+        return $this->extractGatewayResult($response, 'getXappMonetizationCatalog');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getXappMonetizationAccess(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $query = self::buildMonetizationScopeQuery($input);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/access', $query);
+        return $this->extractGatewayResult($response, 'getXappMonetizationAccess');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getXappCurrentSubscription(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $query = self::buildMonetizationScopeQuery($input);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/current-subscription', $query);
+        return $this->extractGatewayResult($response, 'getXappCurrentSubscription');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function listXappWalletAccounts(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $query = self::buildMonetizationScopeQuery($input);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/wallet-accounts', $query);
+        return $this->extractGatewayResult($response, 'listXappWalletAccounts');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function listXappWalletLedger(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $query = self::withoutNullValues([
+            'subject_id' => self::optionalTrimmedString($input['subjectId'] ?? $input['subject_id'] ?? null),
+            'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+            'realm_ref' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+            'wallet_account_id' => self::optionalTrimmedString($input['walletAccountId'] ?? $input['wallet_account_id'] ?? null),
+            'payment_session_id' => self::optionalTrimmedString($input['paymentSessionId'] ?? $input['payment_session_id'] ?? null),
+            'request_id' => self::optionalTrimmedString($input['requestId'] ?? $input['request_id'] ?? null),
+            'settlement_ref' => self::optionalTrimmedString($input['settlementRef'] ?? $input['settlement_ref'] ?? null),
+        ]);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/wallet-ledger', $query);
+        return $this->extractGatewayResult($response, 'listXappWalletLedger');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function consumeXappWalletCredits(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $walletAccountId = self::requireNonEmptyString((string) ($input['walletAccountId'] ?? $input['wallet_account_id'] ?? ''), 'walletAccountId');
+        $amount = self::requireNonEmptyString((string) ($input['amount'] ?? ''), 'amount');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/wallet-accounts/' . rawurlencode($walletAccountId) . '/consume',
+            self::withoutNullValues([
+                'amount' => $amount,
+                'source_ref' => self::optionalTrimmedString($input['sourceRef'] ?? $input['source_ref'] ?? null),
+                'metadata' => self::optionalRecord($input['metadata'] ?? null),
+            ])
+        );
+        return $this->extractGatewayResult($response, 'consumeXappWalletCredits');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function prepareXappPurchaseIntent(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/prepare',
+            self::withoutNullValues([
+                'offering_id' => self::optionalTrimmedString($input['offeringId'] ?? $input['offering_id'] ?? null),
+                'package_id' => self::optionalTrimmedString($input['packageId'] ?? $input['package_id'] ?? null),
+                'price_id' => self::optionalTrimmedString($input['priceId'] ?? $input['price_id'] ?? null),
+                'subject_id' => self::optionalTrimmedString($input['subjectId'] ?? $input['subject_id'] ?? null),
+                'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+                'realm_ref' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+                'source_kind' => self::optionalTrimmedString($input['sourceKind'] ?? $input['source_kind'] ?? null),
+                'source_ref' => self::optionalTrimmedString($input['sourceRef'] ?? $input['source_ref'] ?? null),
+                'payment_lane' => self::optionalTrimmedString($input['paymentLane'] ?? $input['payment_lane'] ?? null),
+                'payment_session_id' => self::optionalTrimmedString($input['paymentSessionId'] ?? $input['payment_session_id'] ?? null),
+                'request_id' => self::optionalTrimmedString($input['requestId'] ?? $input['request_id'] ?? null),
+            ]),
+        );
+        return $this->extractGatewayResult($response, 'prepareXappPurchaseIntent');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getXappPurchaseIntent(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->get(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId)
+        );
+        return $this->extractGatewayResult($response, 'getXappPurchaseIntent');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function createXappPurchaseTransaction(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/transactions',
+            self::withoutNullValues([
+                'status' => self::optionalTrimmedString($input['status'] ?? null),
+                'provider_ref' => self::optionalTrimmedString($input['providerRef'] ?? $input['provider_ref'] ?? null),
+                'evidence_ref' => self::optionalTrimmedString($input['evidenceRef'] ?? $input['evidence_ref'] ?? null),
+                'payment_session_id' => self::optionalTrimmedString($input['paymentSessionId'] ?? $input['payment_session_id'] ?? null),
+                'request_id' => self::optionalTrimmedString($input['requestId'] ?? $input['request_id'] ?? null),
+                'settlement_ref' => self::optionalTrimmedString($input['settlementRef'] ?? $input['settlement_ref'] ?? null),
+                'amount' => array_key_exists('amount', $input) ? $input['amount'] : null,
+                'currency' => self::optionalTrimmedString($input['currency'] ?? null),
+                'occurred_at' => self::optionalTrimmedString($input['occurredAt'] ?? $input['occurred_at'] ?? null),
+            ]),
+        );
+        return $this->extractGatewayResult($response, 'createXappPurchaseTransaction');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function listXappPurchaseTransactions(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->get(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/transactions'
+        );
+        return $this->extractGatewayResult($response, 'listXappPurchaseTransactions');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function createXappPurchasePaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/payment-session',
+            self::withoutNullValues([
+                'payment_guard_ref' => self::optionalTrimmedString($input['paymentGuardRef'] ?? $input['payment_guard_ref'] ?? null),
+                'issuer' => self::optionalTrimmedString($input['issuer'] ?? null),
+                'scheme' => self::optionalTrimmedString($input['scheme'] ?? null),
+                'payment_scheme' => self::optionalTrimmedString($input['paymentScheme'] ?? $input['payment_scheme'] ?? null),
+                'return_url' => self::optionalTrimmedString($input['returnUrl'] ?? $input['return_url'] ?? null),
+                'cancel_url' => self::optionalTrimmedString($input['cancelUrl'] ?? $input['cancel_url'] ?? null),
+                'xapps_resume' => self::optionalTrimmedString($input['xappsResume'] ?? $input['xapps_resume'] ?? null),
+                'page_url' => self::optionalTrimmedString($input['pageUrl'] ?? $input['page_url'] ?? null),
+                'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+                'subject_id' => self::optionalTrimmedString($input['subjectId'] ?? $input['subject_id'] ?? null),
+                'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+                'metadata' => (isset($input['metadata']) && is_array($input['metadata'])) ? $input['metadata'] : null,
+            ]),
+        );
+        return $this->extractGatewayResult($response, 'createXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function reconcileXappPurchasePaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/payment-session/reconcile',
+            [],
+        );
+        return $this->extractGatewayResult($response, 'reconcileXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function finalizeXappPurchasePaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/payment-session/finalize',
+            [],
+        );
+        return $this->extractGatewayResult($response, 'finalizeXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function issueXappPurchaseAccess(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/issue-access',
+            [],
+        );
+        return $this->extractGatewayResult($response, 'issueXappPurchaseAccess');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function reconcileXappSubscriptionContractPaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedContractId = self::requireNonEmptyString((string) ($input['contractId'] ?? $input['contract_id'] ?? ''), 'contractId');
+        $paymentSessionId = self::requireNonEmptyString((string) ($input['paymentSessionId'] ?? $input['payment_session_id'] ?? ''), 'paymentSessionId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/subscription-contracts/' . rawurlencode($resolvedContractId) . '/reconcile-payment-session',
+            ['payment_session_id' => $paymentSessionId],
+        );
+        return $this->extractGatewayResult($response, 'reconcileXappSubscriptionContractPaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function cancelXappSubscriptionContract(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedContractId = self::requireNonEmptyString((string) ($input['contractId'] ?? $input['contract_id'] ?? ''), 'contractId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/subscription-contracts/' . rawurlencode($resolvedContractId) . '/cancel',
+            [],
+        );
+        return $this->extractGatewayResult($response, 'cancelXappSubscriptionContract');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function refreshXappSubscriptionContractState(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedContractId = self::requireNonEmptyString((string) ($input['contractId'] ?? $input['contract_id'] ?? ''), 'contractId');
+        $response = $this->post(
+            '/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/subscription-contracts/' . rawurlencode($resolvedContractId) . '/refresh-state',
+            [],
+        );
+        return $this->extractGatewayResult($response, 'refreshXappSubscriptionContractState');
+    }
+
     /** @param array<string,mixed> $payload @return array{session:?array<string,mixed>,redirectUrl:?string,flow:?string,paymentSessionId:?string,clientSettleUrl:?string,providerReference:?string,scheme:?array<string,mixed>,metadata:?array<string,mixed>} */
     private function parseCompleteLikePayload(array $payload): array
     {
@@ -702,5 +936,39 @@ final class GatewayClient
             $result[$key] = $value;
         }
         return $result;
+    }
+
+    /** @param array<string,mixed> $input @return array<string,string> */
+    private static function buildMonetizationScopeQuery(array $input): array
+    {
+        return self::withoutNullValues([
+            'subject_id' => self::optionalTrimmedString($input['subjectId'] ?? $input['subject_id'] ?? null),
+            'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+            'realm_ref' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+        ]);
+    }
+
+    private static function requireNonEmptyString(string $value, string $label): string
+    {
+        $resolved = trim($value);
+        if ($resolved === '') {
+            throw new XappsSdkError(XappsSdkError::INVALID_ARGUMENT, $label . ' is required');
+        }
+        return $resolved;
+    }
+
+    private static function optionalTrimmedString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $resolved = trim((string) $value);
+        return $resolved !== '' ? $resolved : null;
+    }
+
+    /** @return array<string,mixed>|null */
+    private static function optionalRecord(mixed $value): ?array
+    {
+        return is_array($value) ? $value : null;
     }
 }

@@ -147,6 +147,150 @@ return [
                 'subjectId' => (string) ($resolved['subjectId'] ?? ''),
             ]);
             xappsPhpAssertTrue(($uninstalled['ok'] ?? false) === true, 'uninstall should return ok');
+
+            $catalog = $client->getXappMonetizationCatalog('xapp_demo');
+            xappsPhpAssertSame('xapp_demo', (string) ($catalog['xapp_id'] ?? ''));
+
+            TestCurlShim::reset();
+            $access = $client->getXappMonetizationAccess([
+                'xappId' => 'xapp_demo',
+                'subjectId' => 'subj_fixture_1',
+            ]);
+            xappsPhpAssertTrue(($access['access_projection']['has_current_access'] ?? false) === true, 'access projection should be returned');
+            $accessRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('subj_fixture_1', $accessRequest['query']['subject_id'] ?? null, 'access scope query mismatch');
+
+            $subscription = $client->getXappCurrentSubscription([
+                'xappId' => 'xapp_demo',
+                'installationId' => 'inst_fixture_1',
+            ]);
+            xappsPhpAssertSame('active', (string) ($subscription['current_subscription']['status'] ?? ''));
+
+            TestCurlShim::reset();
+            $walletAccounts = $client->listXappWalletAccounts([
+                'xappId' => 'xapp_demo',
+                'subjectId' => 'subj_fixture_1',
+            ]);
+            xappsPhpAssertSame('wallet_fixture_1', (string) ($walletAccounts['items'][0]['id'] ?? ''));
+            $walletAccountsRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('subj_fixture_1', $walletAccountsRequest['query']['subject_id'] ?? null, 'wallet accounts scope query mismatch');
+
+            TestCurlShim::reset();
+            $walletLedger = $client->listXappWalletLedger([
+                'xappId' => 'xapp_demo',
+                'subjectId' => 'subj_fixture_1',
+                'walletAccountId' => 'wallet_fixture_1',
+                'paymentSessionId' => 'pay_fixture_1',
+            ]);
+            xappsPhpAssertSame('ledger_fixture_1', (string) ($walletLedger['items'][0]['id'] ?? ''));
+            $walletLedgerRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('wallet_fixture_1', $walletLedgerRequest['query']['wallet_account_id'] ?? null, 'wallet ledger account filter mismatch');
+            xappsPhpAssertSame('pay_fixture_1', $walletLedgerRequest['query']['payment_session_id'] ?? null, 'wallet ledger payment filter mismatch');
+
+            TestCurlShim::reset();
+            $consumedWallet = $client->consumeXappWalletCredits([
+                'xappId' => 'xapp_demo',
+                'walletAccountId' => 'wallet_fixture_1',
+                'amount' => '25',
+                'sourceRef' => 'feature:priority_support_call',
+                'metadata' => [
+                    'feature_key' => 'priority_support_call',
+                    'surface' => 'creator-club',
+                ],
+            ]);
+            xappsPhpAssertSame('475', (string) ($consumedWallet['wallet_account']['balance_remaining'] ?? ''));
+            xappsPhpAssertSame('consume', (string) ($consumedWallet['wallet_ledger']['event_kind'] ?? ''));
+            $consumeRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('/v1/xapps/xapp_demo/monetization/wallet-accounts/wallet_fixture_1/consume', $consumeRequest['path'] ?? null, 'wallet consume path mismatch');
+            xappsPhpAssertSame('25', $consumeRequest['payload']['amount'] ?? null, 'wallet consume amount mismatch');
+            xappsPhpAssertSame('feature:priority_support_call', $consumeRequest['payload']['source_ref'] ?? null, 'wallet consume source_ref mismatch');
+
+            TestCurlShim::reset();
+            $preparedIntent = $client->prepareXappPurchaseIntent([
+                'xappId' => 'xapp_demo',
+                'offeringId' => 'offering_fixture_1',
+                'packageId' => 'pkg_fixture_1',
+                'priceId' => 'price_fixture_1',
+                'subjectId' => 'subj_fixture_1',
+                'sourceKind' => 'owner_managed_external',
+                'sourceRef' => 'test-playground',
+                'paymentLane' => 'publisher_rendered_playground',
+            ]);
+            xappsPhpAssertSame('intent_fixture_1', (string) ($preparedIntent['prepared_intent']['purchase_intent_id'] ?? ''));
+            $prepareRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('offering_fixture_1', $prepareRequest['payload']['offering_id'] ?? null, 'prepare intent offering mismatch');
+
+            $loadedIntent = $client->getXappPurchaseIntent([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+            ]);
+            xappsPhpAssertSame('intent_fixture_1', (string) ($loadedIntent['prepared_intent']['purchase_intent_id'] ?? ''));
+
+            $createdTransaction = $client->createXappPurchaseTransaction([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'status' => 'verified',
+                'paymentSessionId' => 'pay_fixture_1',
+            ]);
+            xappsPhpAssertSame('verified', (string) ($createdTransaction['transaction']['status'] ?? ''));
+
+            $listedTransactions = $client->listXappPurchaseTransactions([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+            ]);
+            xappsPhpAssertSame('txn_intent_fixture_1', (string) ($listedTransactions['items'][0]['id'] ?? ''));
+
+            TestCurlShim::reset();
+            $createdPaymentSession = $client->createXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'paymentGuardRef' => 'creator_club_gateway_managed_hosted',
+                'returnUrl' => 'https://tenant.example.test/return',
+                'issuer' => 'gateway',
+                'scheme' => 'mock_manual',
+                'metadata' => ['source' => 'php-test'],
+            ]);
+            xappsPhpAssertSame('pay_intent_fixture_1', (string) ($createdPaymentSession['payment_session']['payment_session_id'] ?? ''));
+            $paymentSessionRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('creator_club_gateway_managed_hosted', $paymentSessionRequest['payload']['payment_guard_ref'] ?? null, 'payment session payment_guard_ref mismatch');
+
+            $reconciled = $client->reconcileXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+            ]);
+            xappsPhpAssertSame('verified', (string) ($reconciled['transaction']['status'] ?? ''));
+
+            $finalized = $client->finalizeXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+            ]);
+            xappsPhpAssertSame('verified', (string) ($finalized['transaction']['status'] ?? ''));
+            xappsPhpAssertTrue(($finalized['access_projection']['has_current_access'] ?? false) === true, 'finalized access mismatch');
+
+            $issued = $client->issueXappPurchaseAccess([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+            ]);
+            xappsPhpAssertSame('paid', (string) ($issued['prepared_intent']['status'] ?? ''));
+
+            $subscriptionReconcile = $client->reconcileXappSubscriptionContractPaymentSession([
+                'xappId' => 'xapp_demo',
+                'contractId' => 'sub_contract_1',
+                'paymentSessionId' => 'pay_renewal_1',
+            ]);
+            xappsPhpAssertSame('active', (string) ($subscriptionReconcile['subscription_contract']['status'] ?? ''));
+
+            $subscriptionCancel = $client->cancelXappSubscriptionContract([
+                'xappId' => 'xapp_demo',
+                'contractId' => 'sub_contract_1',
+            ]);
+            xappsPhpAssertSame('cancelled', (string) ($subscriptionCancel['subscription_contract']['status'] ?? ''));
+
+            $subscriptionRefresh = $client->refreshXappSubscriptionContractState([
+                'xappId' => 'xapp_demo',
+                'contractId' => 'sub_contract_1',
+            ]);
+            xappsPhpAssertSame('past_due', (string) ($subscriptionRefresh['subscription_contract']['status'] ?? ''));
         },
     ],
 ];

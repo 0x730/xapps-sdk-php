@@ -279,6 +279,269 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'sellables' => [
+                    [
+                        'id' => 'offering_fixture_1',
+                        'slug' => 'creator_default_paywall',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/access$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'access_projection' => [
+                    'entitlement_state' => 'active',
+                    'has_current_access' => true,
+                    'credits_remaining' => 500,
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/current-subscription$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'current_subscription' => [
+                    'id' => 'sub_fixture_1',
+                    'status' => 'active',
+                    'tier' => 'creator_team_hybrid_access',
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/wallet-accounts$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'items' => [
+                    [
+                        'id' => 'wallet_fixture_1',
+                        'status' => 'active',
+                        'product_slug' => 'creator_credits_500',
+                        'balance_remaining' => '500',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/wallet-ledger$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'items' => [
+                    [
+                        'id' => 'ledger_fixture_1',
+                        'wallet_account_id' => (string) (($query['wallet_account_id'] ?? 'wallet_fixture_1')),
+                        'event_kind' => 'top_up',
+                        'payment_session_id' => (string) (($query['payment_session_id'] ?? '')),
+                        'amount' => '500',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/wallet-accounts/([^/]+)/consume$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'wallet_account' => [
+                    'id' => $matches[2],
+                    'status' => 'active',
+                    'product_slug' => 'creator_credits_500',
+                    'balance_remaining' => '475',
+                ],
+                'wallet_ledger' => [
+                    'id' => 'ledger_consume_fixture_1',
+                    'wallet_account_id' => $matches[2],
+                    'event_kind' => 'consume',
+                    'source_ref' => (string) ($payload['source_ref'] ?? ''),
+                    'amount' => (string) ($payload['amount'] ?? ''),
+                ],
+                'access_projection' => [
+                    'has_current_access' => true,
+                    'credits_remaining' => 475,
+                ],
+                'snapshot_id' => 'snapshot_fixture_1',
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/prepare$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => 'intent_fixture_1',
+                    'status' => 'created',
+                    'package' => [
+                        'id' => (string) ($payload['package_id'] ?? 'pkg_fixture_1'),
+                    ],
+                    'price' => [
+                        'id' => (string) ($payload['price_id'] ?? 'price_fixture_1'),
+                        'amount' => '29',
+                        'currency' => 'RON',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => $matches[2],
+                    'status' => 'awaiting_payment',
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/transactions$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'transaction' => [
+                    'id' => 'txn_' . $matches[2],
+                    'status' => (string) ($payload['status'] ?? 'created'),
+                    'payment_session_id' => (string) ($payload['payment_session_id'] ?? ''),
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/transactions$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'items' => [
+                    [
+                        'id' => 'txn_' . $matches[2],
+                        'status' => 'verified',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => [
+                    'payment_session_id' => 'pay_' . $matches[2],
+                    'status' => 'pending',
+                    'issuer' => (string) ($payload['issuer'] ?? 'gateway'),
+                ],
+                'payment_page_url' => 'https://pay.example.test/session/' . rawurlencode('pay_' . $matches[2]),
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session/reconcile$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => $matches[2],
+                    'status' => 'paid',
+                ],
+                'payment_session' => [
+                    'payment_session_id' => 'pay_' . $matches[2],
+                    'status' => 'completed',
+                ],
+                'transaction' => [
+                    'id' => 'txn_' . $matches[2],
+                    'status' => 'verified',
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session/finalize$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => $matches[2],
+                    'status' => 'paid',
+                ],
+                'payment_session' => [
+                    'payment_session_id' => 'pay_' . $matches[2],
+                    'status' => 'completed',
+                ],
+                'transaction' => [
+                    'id' => 'txn_' . $matches[2],
+                    'status' => 'verified',
+                ],
+                'access_projection' => [
+                    'has_current_access' => true,
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/issue-access$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => $matches[2],
+                    'status' => 'paid',
+                ],
+                'issuance_mode' => 'one_time_purchase',
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/subscription-contracts/([^/]+)/reconcile-payment-session$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => [
+                    'payment_session_id' => (string) ($payload['payment_session_id'] ?? ''),
+                    'status' => 'completed',
+                ],
+                'subscription_contract' => [
+                    'id' => $matches[2],
+                    'status' => 'active',
+                ],
+                'current_subscription' => [
+                    'id' => $matches[2],
+                    'status' => 'active',
+                ],
+                'access_projection' => [
+                    'entitlement_state' => 'active',
+                ],
+                'transaction' => [
+                    'id' => 'txn_' . $matches[2],
+                    'status' => 'verified',
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/subscription-contracts/([^/]+)/cancel$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => null,
+                'subscription_contract' => [
+                    'id' => $matches[2],
+                    'status' => 'cancelled',
+                ],
+                'current_subscription' => [
+                    'id' => $matches[2],
+                    'status' => 'cancelled',
+                ],
+                'access_projection' => [
+                    'entitlement_state' => 'active',
+                ],
+                'transaction' => null,
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/subscription-contracts/([^/]+)/refresh-state$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => null,
+                'subscription_contract' => [
+                    'id' => $matches[2],
+                    'status' => 'past_due',
+                ],
+                'current_subscription' => [
+                    'id' => $matches[2],
+                    'status' => 'past_due',
+                ],
+                'access_projection' => [
+                    'entitlement_state' => 'suspended',
+                ],
+                'transaction' => null,
+            ]);
+        }
         if ($method === 'POST' && $path === '/publisher/import-manifest') {
             $slug = trim((string) ($payload['slug'] ?? 'demo'));
             return self::json(200, [
