@@ -120,6 +120,7 @@ The current package surface provides:
 - default route surface
 - default mode tree
 - payment runtime assembly
+- higher-level XMS purchase workflow helpers
 - host-proxy service assembly
 - request-widget bootstrap verification passthrough
 - subject-profile sourcing hooks
@@ -136,6 +137,8 @@ Internal package structure is intentionally modular:
   plain-PHP request/bootstrap helpers
 - `src/Backend/PaymentRuntime.php`
   payment runtime assembly and payment-page API helpers
+- `src/Backend/Xms.php`
+  higher-level XMS purchase workflow helpers on top of the PHP gateway client
 - `src/Backend/HostProxy.php`
   host-proxy service and plain-app creation
 - `src/Backend/Modules.php`
@@ -155,6 +158,29 @@ Current route surface includes:
 - payment
 - guard
 - subject profiles
+
+Current workflow helpers also include:
+
+- `BackendKit::normalizeXappMonetizationScopeKind(...)`
+  normalizes subject / installation / realm scope selection
+- `BackendKit::resolveXappMonetizationScope(...)`
+  resolves scope fields from runtime context plus optional realm reference
+- `BackendKit::resolveXappHostedPaymentDefinition(...)`
+  resolves a manifest payment definition into hosted session config, including delegated signing metadata
+- `BackendKit::listXappHostedPaymentPresets(...)`
+  shapes manifest payment definitions into generic hosted-lane preset options for UI selectors
+- `BackendKit::findXappHostedPaymentPreset(...)`
+  looks up one hosted-lane preset by `paymentGuardRef`
+- `BackendKit::readXappMonetizationSnapshot(...)`
+  reads the common app-facing XMS state bundle: access, current subscription, and wallet accounts
+- `BackendKit::consumeXappWalletCredits(...)`
+  consumes credits from one wallet account through the XMS API and returns the updated wallet, ledger entry, and refreshed access projection
+- `BackendKit::startXappHostedPurchase(...)`
+  prepares a purchase intent and creates the lane-bootstrapped gateway payment session
+- `BackendKit::finalizeXappHostedPurchase(...)`
+  finalizes a hosted purchase through the platform finalize endpoint, returning reconciliation and issued access state
+- `BackendKit::activateXappPurchaseReference(...)`
+  prepares a purchase intent, creates a verified reference transaction, and issues access
 
 ## Minimal usage
 

@@ -15,6 +15,7 @@ require_once __DIR__ . '/Backend/Runtime.php';
 require_once __DIR__ . '/Backend/Modules.php';
 require_once __DIR__ . '/Backend/PaymentRuntime.php';
 require_once __DIR__ . '/Backend/HostProxy.php';
+require_once __DIR__ . '/Backend/Xms.php';
 
 final class BackendKit
 {
@@ -116,6 +117,56 @@ final class BackendKit
         array $deps = [],
     ): array {
         return BackendPaymentRuntime::buildModeHostedGatewayPaymentUrl($app, $input, $modeMeta, $deps);
+    }
+
+    public static function startXappHostedPurchase(object $gatewayClient, array $input): array
+    {
+        return BackendXms::startXappHostedPurchase($gatewayClient, $input);
+    }
+
+    public static function readXappMonetizationSnapshot(object $gatewayClient, array $input): array
+    {
+        return BackendXms::readXappMonetizationSnapshot($gatewayClient, $input);
+    }
+
+    public static function consumeXappWalletCredits(object $gatewayClient, array $input): array
+    {
+        return BackendXms::consumeXappWalletCredits($gatewayClient, $input);
+    }
+
+    public static function normalizeXappMonetizationScopeKind(mixed $value): string
+    {
+        return BackendXms::normalizeXappMonetizationScopeKind($value);
+    }
+
+    public static function resolveXappMonetizationScope(array $input): array
+    {
+        return BackendXms::resolveXappMonetizationScope($input);
+    }
+
+    public static function resolveXappHostedPaymentDefinition(array $input): array
+    {
+        return BackendXms::resolveXappHostedPaymentDefinition($input);
+    }
+
+    public static function listXappHostedPaymentPresets(array $input): array
+    {
+        return BackendXms::listXappHostedPaymentPresets($input);
+    }
+
+    public static function findXappHostedPaymentPreset(array $input): ?array
+    {
+        return BackendXms::findXappHostedPaymentPreset($input);
+    }
+
+    public static function finalizeXappHostedPurchase(object $gatewayClient, array $input): array
+    {
+        return BackendXms::finalizeXappHostedPurchase($gatewayClient, $input);
+    }
+
+    public static function activateXappPurchaseReference(object $gatewayClient, array $input): array
+    {
+        return BackendXms::activateXappPurchaseReference($gatewayClient, $input);
     }
 
     public static function registerPaymentPageApiRoutes(
