@@ -129,6 +129,11 @@ final class BackendKit
         return BackendXms::readXappMonetizationSnapshot($gatewayClient, $input);
     }
 
+    public static function buildXappMonetizationReferenceSummary(array $input): array
+    {
+        return BackendXms::buildXappMonetizationReferenceSummary($input);
+    }
+
     public static function consumeXappWalletCredits(object $gatewayClient, array $input): array
     {
         return BackendXms::consumeXappWalletCredits($gatewayClient, $input);

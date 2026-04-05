@@ -6,6 +6,38 @@ namespace Xapps\BackendKit;
 
 final class BackendXms
 {
+    private static function readLower(mixed $value): string
+    {
+        return strtolower(trim((string) $value));
+    }
+
+    private static function readBoolean(mixed $value, bool $fallback = false): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (float) $value !== 0.0;
+        }
+        $normalized = self::readLower($value);
+        if ($normalized === '') {
+            return $fallback;
+        }
+        if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+            return true;
+        }
+        if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+            return false;
+        }
+        return $fallback;
+    }
+
+    /** @return array<string,mixed>|null */
+    private static function asRecord(mixed $value): ?array
+    {
+        return is_array($value) ? $value : null;
+    }
+
     /** @return 'subject'|'installation'|'realm' */
     public static function normalizeXappMonetizationScopeKind(mixed $value): string
     {
@@ -74,6 +106,51 @@ final class BackendXms
         return array_filter([
             'xappId' => trim((string) ($input['xappId'] ?? $input['xapp_id'] ?? '')),
         ] + self::buildScopeFields($input), static fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    /** @param array<string,mixed> $item */
+    private static function hasCurrentOwnedEntitlement(array $item): bool
+    {
+        $status = self::readLower($item['status'] ?? null);
+        return in_array($status, ['active', 'issued', 'grace_period'], true);
+    }
+
+    /** @param array<string,mixed> $item @return array<string,mixed>|null */
+    private static function normalizeReferencePackageSummary(array $item): ?array
+    {
+        $packageSlug = self::optionalTrimmedString($item['package_slug'] ?? $item['packageSlug'] ?? null);
+        $paywallSlug = self::optionalTrimmedString($item['paywall_slug'] ?? $item['paywallSlug'] ?? null);
+        $productFamily = self::optionalTrimmedString($item['product_family'] ?? $item['productFamily'] ?? null);
+        $packageKind = self::optionalTrimmedString($item['package_kind'] ?? $item['packageKind'] ?? null);
+        if ($packageSlug === null && $paywallSlug === null && $productFamily === null && $packageKind === null) {
+            return null;
+        }
+        $purchasePolicyRecord = self::asRecord($item['purchase_policy'] ?? $item['purchasePolicy'] ?? null);
+        return [
+            'package_slug' => $packageSlug,
+            'paywall_slug' => $paywallSlug,
+            'product_family' => $productFamily,
+            'package_kind' => $packageKind,
+            'purchase_policy' => $purchasePolicyRecord
+                ? [
+                    'can_purchase' => self::readBoolean($purchasePolicyRecord['can_purchase'] ?? $purchasePolicyRecord['canPurchase'] ?? null, false),
+                    'status' => match (self::readLower($purchasePolicyRecord['status'] ?? null)) {
+                        'current_recurring_plan' => 'current_recurring_plan',
+                        'owned_additive_unlock' => 'owned_additive_unlock',
+                        default => 'available',
+                    },
+                    'transition_kind' => match (self::readLower($purchasePolicyRecord['transition_kind'] ?? $purchasePolicyRecord['transitionKind'] ?? null)) {
+                        'start_recurring' => 'start_recurring',
+                        'replace_recurring' => 'replace_recurring',
+                        'buy_additive_unlock' => 'buy_additive_unlock',
+                        'buy_credit_pack' => 'buy_credit_pack',
+                        'activate_hybrid' => 'activate_hybrid',
+                        default => 'none',
+                    },
+                    'reason' => self::optionalTrimmedString($purchasePolicyRecord['reason'] ?? null),
+                ]
+                : null,
+        ];
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
@@ -416,6 +493,9 @@ final class BackendXms
     {
         $getMonetizationAccess = self::requireGatewayMethod($gatewayClient, 'getXappMonetizationAccess');
         $getCurrentSubscription = self::requireGatewayMethod($gatewayClient, 'getXappCurrentSubscription');
+        $listEntitlements = method_exists($gatewayClient, 'listXappEntitlements')
+            ? self::requireGatewayMethod($gatewayClient, 'listXappEntitlements')
+            : null;
         $listWalletAccounts = self::requireGatewayMethod($gatewayClient, 'listXappWalletAccounts');
         $scopePayload = self::buildSnapshotScopePayload($input);
         $includeWalletAccounts = !array_key_exists('includeWalletAccounts', $input) || $input['includeWalletAccounts'] !== false;
@@ -423,6 +503,7 @@ final class BackendXms
 
         $accessResult = $getMonetizationAccess($scopePayload);
         $currentSubscriptionResult = $getCurrentSubscription($scopePayload);
+        $entitlementsResult = $listEntitlements ? $listEntitlements($scopePayload) : null;
         $walletAccountsResult = $includeWalletAccounts ? $listWalletAccounts($scopePayload) : null;
         $walletLedgerResult = null;
         if ($includeWalletLedger) {
@@ -442,8 +523,58 @@ final class BackendXms
         return [
             'access_projection' => isset($accessResult['access_projection']) && is_array($accessResult['access_projection']) ? $accessResult['access_projection'] : null,
             'current_subscription' => isset($currentSubscriptionResult['current_subscription']) && is_array($currentSubscriptionResult['current_subscription']) ? $currentSubscriptionResult['current_subscription'] : null,
+            'entitlements' => isset($entitlementsResult['items']) && is_array($entitlementsResult['items']) ? $entitlementsResult['items'] : [],
             'wallet_accounts' => isset($walletAccountsResult['items']) && is_array($walletAccountsResult['items']) ? $walletAccountsResult['items'] : [],
             'wallet_ledger' => isset($walletLedgerResult['items']) && is_array($walletLedgerResult['items']) ? $walletLedgerResult['items'] : [],
+        ];
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public static function buildXappMonetizationReferenceSummary(array $input): array
+    {
+        $snapshot = self::asRecord($input['snapshot'] ?? null) ?? [];
+        $currentSubscription = self::asRecord($snapshot['current_subscription'] ?? null);
+        $entitlements = isset($snapshot['entitlements']) && is_array($snapshot['entitlements']) ? $snapshot['entitlements'] : [];
+        $accessProjection = self::asRecord($snapshot['access_projection'] ?? null);
+        $rawPackages = isset($input['paywallPackages']) && is_array($input['paywallPackages'])
+            ? $input['paywallPackages']
+            : (isset($input['paywall_packages']) && is_array($input['paywall_packages']) ? $input['paywall_packages'] : []);
+
+        $paywallPackages = [];
+        foreach ($rawPackages as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $normalized = self::normalizeReferencePackageSummary($item);
+            if ($normalized !== null) {
+                $paywallPackages[] = $normalized;
+            }
+        }
+
+        return [
+            'current_recurring_plan' => $currentSubscription
+                ? [
+                    'product_slug' => self::optionalTrimmedString($currentSubscription['product_slug'] ?? null),
+                    'package_slug' => self::optionalTrimmedString($currentSubscription['package_slug'] ?? null),
+                    'status' => self::optionalTrimmedString($currentSubscription['status'] ?? null),
+                    'renews_at' => self::optionalTrimmedString($currentSubscription['renews_at'] ?? null),
+                ]
+                : null,
+            'owned_additive_unlocks' => array_values(array_filter($paywallPackages, static fn (array $item): bool => (($item['purchase_policy']['status'] ?? null) === 'owned_additive_unlock'))),
+            'available_additive_unlocks' => array_values(array_filter($paywallPackages, static function (array $item): bool {
+                $productFamily = self::readLower($item['product_family'] ?? null);
+                $packageKind = self::readLower($item['package_kind'] ?? null);
+                return ($productFamily === 'one_time_unlock' || $packageKind === 'one_time_unlock') &&
+                    (($item['purchase_policy']['can_purchase'] ?? true) !== false);
+            })),
+            'recurring_options' => array_values(array_filter($paywallPackages, static function (array $item): bool {
+                $transitionKind = $item['purchase_policy']['transition_kind'] ?? 'none';
+                return $transitionKind === 'start_recurring' || $transitionKind === 'replace_recurring';
+            })),
+            'credit_topups' => array_values(array_filter($paywallPackages, static fn (array $item): bool => (($item['purchase_policy']['transition_kind'] ?? null) === 'buy_credit_pack'))),
+            'blocked_packages' => array_values(array_filter($paywallPackages, static fn (array $item): bool => (($item['purchase_policy']['can_purchase'] ?? true) === false))),
+            'owned_entitlement_count' => count(array_filter($entitlements, static fn (mixed $item): bool => is_array($item) && self::hasCurrentOwnedEntitlement($item))),
+            'has_current_access' => self::readBoolean($accessProjection['has_current_access'] ?? null, false),
         ];
     }
 

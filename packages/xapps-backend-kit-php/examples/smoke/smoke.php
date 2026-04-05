@@ -182,6 +182,55 @@ $foundHostedPaymentPreset = BackendKit::findXappHostedPaymentPreset([
 ]);
 assertTrue(($foundHostedPaymentPreset['paymentScheme'] ?? '') === 'mock_manual', 'findXappHostedPaymentPreset mismatch');
 
+$referenceSummary = BackendKit::buildXappMonetizationReferenceSummary([
+    'snapshot' => [
+        'current_subscription' => [
+            'status' => 'active',
+            'product_slug' => 'creator-pro',
+            'package_slug' => 'creator-pro-monthly',
+            'renews_at' => '2026-05-05T00:00:00.000Z',
+        ],
+        'entitlements' => [
+            ['status' => 'active', 'product_slug' => 'creator-starter-unlock'],
+        ],
+        'access_projection' => [
+            'has_current_access' => true,
+        ],
+    ],
+    'paywallPackages' => [
+        [
+            'package_slug' => 'creator-pro-monthly',
+            'product_family' => 'subscription_plan',
+            'purchase_policy' => [
+                'can_purchase' => false,
+                'status' => 'current_recurring_plan',
+                'transition_kind' => 'none',
+            ],
+        ],
+        [
+            'package_slug' => 'creator-starter-unlock',
+            'product_family' => 'one_time_unlock',
+            'purchase_policy' => [
+                'can_purchase' => false,
+                'status' => 'owned_additive_unlock',
+                'transition_kind' => 'none',
+            ],
+        ],
+        [
+            'package_slug' => 'creator-boost-credits',
+            'product_family' => 'credit_pack',
+            'purchase_policy' => [
+                'can_purchase' => true,
+                'status' => 'available',
+                'transition_kind' => 'buy_credit_pack',
+            ],
+        ],
+    ],
+]);
+assertTrue(($referenceSummary['current_recurring_plan']['status'] ?? '') === 'active', 'buildXappMonetizationReferenceSummary recurring mismatch');
+assertTrue((($referenceSummary['owned_additive_unlocks'][0]['package_slug'] ?? '') === 'creator-starter-unlock'), 'buildXappMonetizationReferenceSummary unlock mismatch');
+assertTrue((($referenceSummary['credit_topups'][0]['package_slug'] ?? '') === 'creator-boost-credits'), 'buildXappMonetizationReferenceSummary credit mismatch');
+
 $app = BackendKit::createPlainPhpApp([
     'gatewayUrl' => 'https://gateway.example.test',
     'gatewayApiKey' => 'gateway_key',
@@ -290,6 +339,16 @@ $fakeGatewayClient = new class {
     }
 
     /** @return array<string,mixed> */
+    public function listXappEntitlements(array $input): array
+    {
+        return [
+            'items' => [
+                ['id' => 'entitlement_123', 'status' => 'active', 'product_slug' => 'creator-starter-unlock'] + $input,
+            ],
+        ];
+    }
+
+    /** @return array<string,mixed> */
     public function listXappWalletAccounts(array $input): array
     {
         return [
@@ -329,6 +388,7 @@ $snapshot = BackendKit::readXappMonetizationSnapshot($fakeGatewayClient, [
 ]);
 assertTrue(($snapshot['access_projection']['has_current_access'] ?? false) === true, 'readXappMonetizationSnapshot access mismatch');
 assertTrue(($snapshot['current_subscription']['id'] ?? '') === 'sub_contract_123', 'readXappMonetizationSnapshot subscription mismatch');
+assertTrue(($snapshot['entitlements'][0]['id'] ?? '') === 'entitlement_123', 'readXappMonetizationSnapshot entitlements mismatch');
 assertTrue(($snapshot['wallet_accounts'][0]['id'] ?? '') === 'wallet_123', 'readXappMonetizationSnapshot wallet mismatch');
 
 $consumedCredits = BackendKit::consumeXappWalletCredits($fakeGatewayClient, [

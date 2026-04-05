@@ -18,6 +18,12 @@ function xapps_backend_kit_register_host_api_routes(array &$routes, array $app, 
             '/api/install',
             '/api/update',
             '/api/uninstall',
+            '/api/widget-tool-request',
+            '/api/my-xapps/:xappId/monetization',
+            '/api/my-xapps/:xappId/monetization/history',
+            '/api/my-xapps/:xappId/monetization/purchase-intents/prepare',
+            '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session',
+            '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session/finalize',
         ]);
     }
     if (($options['enableBridge'] ?? true) !== false) {

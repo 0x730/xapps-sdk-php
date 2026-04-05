@@ -1,13 +1,13 @@
 {
   "name": "xapps-platform/xapps-backend-kit",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Modular PHP backend kit for the current Xapps backend contract (tenant surface today, shared actor-adapter direction later)",
   "type": "library",
   "license": "MIT",
   "homepage": "https://gateway.0x730.com",
   "require": {
     "php": "^8.2",
-    "xapps-platform/xapps-php": "^0.2.1"
+    "xapps-platform/xapps-php": "^0.2.2"
   },
   "autoload": {
     "psr-4": {
@@ -28,6 +28,7 @@
     }
   ],
   "scripts": {
+    "test": "@php test/run.php",
     "smoke": "@php examples/smoke/smoke.php"
   },
   "minimum-stability": "stable",

@@ -146,6 +146,11 @@ function xapps_backend_kit_reference_endpoint_groups(array $capabilities = [], a
                 ['method' => 'POST', 'path' => '/api/install', 'purpose' => 'Install mutation proxy used by the host page.'],
                 ['method' => 'POST', 'path' => '/api/update', 'purpose' => 'Update mutation proxy used by the host page.'],
                 ['method' => 'POST', 'path' => '/api/uninstall', 'purpose' => 'Uninstall mutation proxy used by the host page.'],
+                ['method' => 'GET', 'path' => '/api/my-xapps/:xappId/monetization', 'purpose' => 'Reads current-user app monetization state for the host plans surface.'],
+                ['method' => 'GET', 'path' => '/api/my-xapps/:xappId/monetization/history', 'purpose' => 'Reads recent current-user XMS history for purchases, access, wallets, and invoices.'],
+                ['method' => 'POST', 'path' => '/api/my-xapps/:xappId/monetization/purchase-intents/prepare', 'purpose' => 'Prepares a current-user purchase intent for the host plans surface.'],
+                ['method' => 'POST', 'path' => '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session', 'purpose' => 'Creates a hosted payment session for the current-user host plans surface.' ],
+                ['method' => 'POST', 'path' => '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session/finalize', 'purpose' => 'Finalizes hosted payment return for the current-user host plans surface.'],
             ],
         ],
         [
