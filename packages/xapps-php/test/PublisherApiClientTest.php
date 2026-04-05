@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Xapps\PublisherApiClient;
+use Xapps\XappsSdkError;
 
 return [
     [
@@ -81,6 +82,30 @@ return [
             ]);
             xappsPhpAssertSame('vendor_assertion_fixture', (string) ($bridge['vendor_assertion'] ?? ''));
             xappsPhpAssertSame('lnk_fixture', (string) ($bridge['link_id'] ?? ''));
+        },
+    ],
+    [
+        'name' => 'PublisherApiClient surfaces bridge linking conflicts as typed API conflicts',
+        'run' => static function (): void {
+            $client = new PublisherApiClient(xappsPhpTestBaseUrl(), '', 20, [
+                'token' => 'publisher-token',
+            ]);
+
+            try {
+                $client->exchangeBridgeToken([
+                    'publisher_id' => 'pub_conflict',
+                    'link_required' => true,
+                ]);
+                throw new RuntimeException('Expected exchangeBridgeToken to throw a conflict');
+            } catch (XappsSdkError $error) {
+                xappsPhpAssertSame(XappsSdkError::PUBLISHER_API_CONFLICT, $error->errorCode, 'Expected publisher API conflict code');
+                xappsPhpAssertSame(409, $error->status, 'Expected 409 status');
+                xappsPhpAssertSame(
+                    'Linking required before vendor assertion minting',
+                    $error->getMessage(),
+                    'Expected conflict message',
+                );
+            }
         },
     ],
 ];

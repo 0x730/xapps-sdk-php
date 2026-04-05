@@ -18,6 +18,7 @@ final class Signature
         $signature = trim((string) ($input['signature'] ?? ''));
         $secret = (string) ($input['secret'] ?? '');
         $algorithm = strtolower(trim((string) ($input['algorithm'] ?? 'hmac-sha256')));
+        $nonce = trim((string) ($input['nonce'] ?? ''));
         $source = trim((string) ($input['source'] ?? ''));
         $requireSource = (bool) ($input['requireSourceInSignature'] ?? false);
         $allowLegacy = (bool) ($input['allowLegacyWithoutSource'] ?? true);
@@ -50,13 +51,26 @@ final class Signature
             return ['ok' => false, 'reason' => 'missing_source', 'mode' => null];
         }
 
-        $strictCanonical = implode("\n", [$method, $pathWithQuery, $timestamp, $bodySha256Hex, $source]);
+        $strictCanonical = implode("\n", array_values(array_filter([
+            $method,
+            $pathWithQuery,
+            $timestamp,
+            $bodySha256Hex,
+            $source,
+            $nonce !== '' ? $nonce : null,
+        ], static fn ($value): bool => $value !== null)));
         if (self::verifyMac($strictCanonical, $signature, $secret, $algorithm)) {
             return ['ok' => true, 'reason' => null, 'mode' => 'strict'];
         }
 
         if ($allowLegacy) {
-            $legacyCanonical = implode("\n", [$method, $pathWithQuery, $timestamp, $bodySha256Hex]);
+            $legacyCanonical = implode("\n", array_values(array_filter([
+                $method,
+                $pathWithQuery,
+                $timestamp,
+                $bodySha256Hex,
+                $nonce !== '' ? $nonce : null,
+            ], static fn ($value): bool => $value !== null)));
             if (self::verifyMac($legacyCanonical, $signature, $secret, $algorithm)) {
                 return ['ok' => true, 'reason' => null, 'mode' => 'legacy'];
             }

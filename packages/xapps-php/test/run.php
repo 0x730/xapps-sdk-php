@@ -12,6 +12,7 @@ $files = [
     __DIR__ . '/EmbedHostProxyServiceTest.php',
     __DIR__ . '/HostedGatewayPaymentSessionTest.php',
     __DIR__ . '/PaymentPolicySupportTest.php',
+    __DIR__ . '/XmsEventsTest.php',
     __DIR__ . '/PublisherApiClientTest.php',
 ];
 

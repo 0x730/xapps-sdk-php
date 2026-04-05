@@ -458,11 +458,162 @@ final class GatewayClient
         return is_array($payload) ? $payload : [];
     }
 
-    /** @return array<string,mixed> */
-    public function getXappMonetizationCatalog(string $xappId): array
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getEmbedMyXappMonetization(array $input): array
     {
-        $resolvedXappId = self::requireNonEmptyString($xappId, 'xappId');
-        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization');
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $query = self::withoutNullValues([
+            'token' => $token,
+            'installationId' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+            'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+            'country' => self::optionalTrimmedString($input['country'] ?? null),
+            'realmRef' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+        ]);
+        $response = $this->get('/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization', $query);
+        return $this->extractGatewayResult($response, 'getEmbedMyXappMonetization');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getEmbedMyXappMonetizationHistory(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $query = self::withoutNullValues([
+            'token' => $token,
+            'limit' => isset($input['limit']) && is_numeric((string) $input['limit']) ? (int) $input['limit'] : null,
+        ]);
+        $response = $this->get('/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/history', $query);
+        return $this->extractGatewayResult($response, 'getEmbedMyXappMonetizationHistory');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function prepareEmbedMyXappPurchaseIntent(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $response = $this->post(
+            '/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/prepare?token=' . rawurlencode($token),
+            self::withoutNullValues([
+                'offering_id' => self::optionalTrimmedString($input['offeringId'] ?? $input['offering_id'] ?? null),
+                'package_id' => self::optionalTrimmedString($input['packageId'] ?? $input['package_id'] ?? null),
+                'price_id' => self::optionalTrimmedString($input['priceId'] ?? $input['price_id'] ?? null),
+                'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+                'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+                'country' => self::optionalTrimmedString($input['country'] ?? null),
+            ]),
+        );
+        return $this->extractGatewayResult($response, 'prepareEmbedMyXappPurchaseIntent');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function createEmbedMyXappPurchasePaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $response = $this->post(
+            '/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/payment-session?token=' . rawurlencode($token),
+            self::withoutNullValues([
+                'payment_guard_ref' => self::optionalTrimmedString($input['paymentGuardRef'] ?? $input['payment_guard_ref'] ?? null),
+                'issuer' => self::optionalTrimmedString($input['issuer'] ?? null),
+                'scheme' => self::optionalTrimmedString($input['scheme'] ?? null),
+                'payment_scheme' => self::optionalTrimmedString($input['paymentScheme'] ?? $input['payment_scheme'] ?? null),
+                'return_url' => self::optionalTrimmedString($input['returnUrl'] ?? $input['return_url'] ?? null),
+                'cancel_url' => self::optionalTrimmedString($input['cancelUrl'] ?? $input['cancel_url'] ?? null),
+                'xapps_resume' => self::optionalTrimmedString($input['xappsResume'] ?? $input['xapps_resume'] ?? null),
+                'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+                'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
+                'metadata' => self::optionalRecord($input['metadata'] ?? null),
+            ]),
+        );
+        return $this->extractGatewayResult($response, 'createEmbedMyXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function finalizeEmbedMyXappPurchasePaymentSession(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedIntentId = self::requireNonEmptyString((string) ($input['intentId'] ?? $input['intent_id'] ?? ''), 'intentId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $response = $this->post(
+            '/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/purchase-intents/' . rawurlencode($resolvedIntentId) . '/payment-session/finalize?token=' . rawurlencode($token),
+            [],
+        );
+        return $this->extractGatewayResult($response, 'finalizeEmbedMyXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function runWidgetToolRequest(array $input): array
+    {
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $installationId = self::requireNonEmptyString((string) ($input['installationId'] ?? $input['installation_id'] ?? ''), 'installationId');
+        $toolName = self::requireNonEmptyString((string) ($input['toolName'] ?? $input['tool_name'] ?? ''), 'toolName');
+        $created = $this->extractGatewayResult(
+            $this->post(
+                '/v1/requests',
+                [
+                    'installationId' => $installationId,
+                    'toolName' => $toolName,
+                    'payload' => (isset($input['payload']) && is_array($input['payload'])) ? $input['payload'] : [],
+                ],
+                ['Authorization' => 'Bearer ' . $token],
+            ),
+            'runWidgetToolRequest'
+        );
+        $requestRecord = (isset($created['request']) && is_array($created['request'])) ? $created['request'] : $created;
+        $requestId = trim((string) ($requestRecord['id'] ?? ''));
+        if ($requestId === '') {
+            return $created;
+        }
+
+        $startedAt = microtime(true);
+        while ((microtime(true) - $startedAt) < 15.0) {
+            $detail = $this->extractGatewayResult(
+                $this->get('/v1/requests/' . rawurlencode($requestId), [], ['Authorization' => 'Bearer ' . $token]),
+                'runWidgetToolRequest'
+            );
+            $detailRequest = (isset($detail['request']) && is_array($detail['request'])) ? $detail['request'] : $detail;
+            $status = strtoupper(trim((string) ($detailRequest['status'] ?? '')));
+            if ($status === 'COMPLETED') {
+                $response = $this->extractGatewayResult(
+                    $this->get('/v1/requests/' . rawurlencode($requestId) . '/response', [], ['Authorization' => 'Bearer ' . $token]),
+                    'runWidgetToolRequest'
+                );
+                if (isset($response['response']) && is_array($response['response'])) {
+                    $responseRecord = $response['response'];
+                    if (isset($responseRecord['result']) && is_array($responseRecord['result'])) {
+                        return $responseRecord['result'];
+                    }
+                    return $responseRecord;
+                }
+                return $response;
+            }
+            if ($status === 'FAILED') {
+                throw new XappsSdkError(
+                    XappsSdkError::GATEWAY_API_HTTP_ERROR,
+                    'Widget tool request failed',
+                    null,
+                    false,
+                    ['details' => $detail],
+                );
+            }
+            usleep(350000);
+        }
+
+        throw new XappsSdkError(
+            XappsSdkError::GATEWAY_API_NETWORK_ERROR,
+            'Widget tool request timed out',
+        );
+    }
+
+    /** @param string|array<string,mixed> $input @return array<string,mixed> */
+    public function getXappMonetizationCatalog(string|array $input): array
+    {
+        $payload = is_array($input) ? $input : ['xappId' => $input];
+        $resolvedXappId = self::requireNonEmptyString((string) ($payload['xappId'] ?? $payload['xapp_id'] ?? ''), 'xappId');
+        $query = self::buildMonetizationTargetingQuery($payload);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization', $query);
         return $this->extractGatewayResult($response, 'getXappMonetizationCatalog');
     }
 
@@ -482,6 +633,15 @@ final class GatewayClient
         $query = self::buildMonetizationScopeQuery($input);
         $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/current-subscription', $query);
         return $this->extractGatewayResult($response, 'getXappCurrentSubscription');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function listXappEntitlements(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $query = self::buildMonetizationScopeQuery($input);
+        $response = $this->get('/v1/xapps/' . rawurlencode($resolvedXappId) . '/monetization/entitlements', $query);
+        return $this->extractGatewayResult($response, 'listXappEntitlements');
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
@@ -540,6 +700,8 @@ final class GatewayClient
                 'subject_id' => self::optionalTrimmedString($input['subjectId'] ?? $input['subject_id'] ?? null),
                 'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
                 'realm_ref' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+                'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+                'country' => self::optionalTrimmedString($input['country'] ?? null),
                 'source_kind' => self::optionalTrimmedString($input['sourceKind'] ?? $input['source_kind'] ?? null),
                 'source_ref' => self::optionalTrimmedString($input['sourceRef'] ?? $input['source_ref'] ?? null),
                 'payment_lane' => self::optionalTrimmedString($input['paymentLane'] ?? $input['payment_lane'] ?? null),
@@ -946,6 +1108,18 @@ final class GatewayClient
             'installation_id' => self::optionalTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null),
             'realm_ref' => self::optionalTrimmedString($input['realmRef'] ?? $input['realm_ref'] ?? null),
         ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,string> */
+    private static function buildMonetizationTargetingQuery(array $input): array
+    {
+        return self::withoutNullValues(array_merge(
+            self::buildMonetizationScopeQuery($input),
+            [
+                'locale' => self::optionalTrimmedString($input['locale'] ?? null),
+                'country' => self::optionalTrimmedString($input['country'] ?? null),
+            ],
+        ));
     }
 
     private static function requireNonEmptyString(string $value, string $label): string

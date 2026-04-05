@@ -148,8 +148,21 @@ return [
             ]);
             xappsPhpAssertTrue(($uninstalled['ok'] ?? false) === true, 'uninstall should return ok');
 
-            $catalog = $client->getXappMonetizationCatalog('xapp_demo');
+            $catalog = $client->getXappMonetizationCatalog([
+                'xappId' => 'xapp_demo',
+                'subjectId' => 'subj_fixture_1',
+                'installationId' => 'inst_fixture_1',
+                'realmRef' => 'workspace_fixture_1',
+                'locale' => 'ro',
+                'country' => 'RO',
+            ]);
             xappsPhpAssertSame('xapp_demo', (string) ($catalog['xapp_id'] ?? ''));
+            $catalogRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('subj_fixture_1', $catalogRequest['query']['subject_id'] ?? null, 'catalog subject query mismatch');
+            xappsPhpAssertSame('inst_fixture_1', $catalogRequest['query']['installation_id'] ?? null, 'catalog installation query mismatch');
+            xappsPhpAssertSame('workspace_fixture_1', $catalogRequest['query']['realm_ref'] ?? null, 'catalog realm query mismatch');
+            xappsPhpAssertSame('ro', $catalogRequest['query']['locale'] ?? null, 'catalog locale query mismatch');
+            xappsPhpAssertSame('RO', $catalogRequest['query']['country'] ?? null, 'catalog country query mismatch');
 
             TestCurlShim::reset();
             $access = $client->getXappMonetizationAccess([
@@ -165,6 +178,114 @@ return [
                 'installationId' => 'inst_fixture_1',
             ]);
             xappsPhpAssertSame('active', (string) ($subscription['current_subscription']['status'] ?? ''));
+
+            TestCurlShim::reset();
+            $entitlements = $client->listXappEntitlements([
+                'xappId' => 'xapp_demo',
+                'subjectId' => 'subj_fixture_1',
+            ]);
+            xappsPhpAssertSame('entitlement_fixture_1', (string) ($entitlements['items'][0]['id'] ?? ''));
+            $entitlementsRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('subj_fixture_1', $entitlementsRequest['query']['subject_id'] ?? null, 'entitlements scope query mismatch');
+
+            TestCurlShim::reset();
+            $embedMonetization = $client->getEmbedMyXappMonetization([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'locale' => 'ro',
+                'country' => 'RO',
+                'realmRef' => 'workspace_fixture_1',
+            ]);
+            xappsPhpAssertSame('xapp_demo', (string) ($embedMonetization['xapp_id'] ?? ''));
+            $embedMonetizationRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('widget_token_fixture', $embedMonetizationRequest['query']['token'] ?? null, 'embed monetization token query mismatch');
+            xappsPhpAssertSame('inst_fixture_1', $embedMonetizationRequest['query']['installationId'] ?? null, 'embed monetization installation mismatch');
+
+            TestCurlShim::reset();
+            $embedHistory = $client->getEmbedMyXappMonetizationHistory([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'limit' => 8,
+            ]);
+            xappsPhpAssertSame('xapp_demo', (string) ($embedHistory['xapp_id'] ?? ''));
+            xappsPhpAssertSame('intent_fixture_1', (string) ($embedHistory['history']['purchase_intents']['items'][0]['id'] ?? ''));
+            $embedHistoryRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('widget_token_fixture', $embedHistoryRequest['query']['token'] ?? null, 'embed history token query mismatch');
+            xappsPhpAssertSame('8', (string) ($embedHistoryRequest['query']['limit'] ?? ''), 'embed history limit mismatch');
+
+            TestCurlShim::reset();
+            $embedPreparedIntent = $client->prepareEmbedMyXappPurchaseIntent([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'offeringId' => 'offering_fixture_1',
+                'packageId' => 'pkg_fixture_1',
+                'priceId' => 'price_fixture_1',
+                'installationId' => 'inst_fixture_1',
+                'locale' => 'ro',
+                'country' => 'RO',
+            ]);
+            xappsPhpAssertSame('intent_fixture_1', (string) ($embedPreparedIntent['prepared_intent']['purchase_intent_id'] ?? ''));
+            $embedPrepareRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('widget_token_fixture', $embedPrepareRequest['query']['token'] ?? null, 'embed prepare token mismatch');
+            xappsPhpAssertSame('inst_fixture_1', $embedPrepareRequest['payload']['installation_id'] ?? null, 'embed prepare installation mismatch');
+
+            TestCurlShim::reset();
+            $embedPaymentSession = $client->createEmbedMyXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'token' => 'widget_token_fixture',
+                'returnUrl' => 'https://tenant.example.test/return',
+                'cancelUrl' => 'https://tenant.example.test/cancel',
+                'installationId' => 'inst_fixture_1',
+                'paymentGuardRef' => 'gateway_checkout_default',
+                'issuer' => 'gateway',
+                'scheme' => 'stripe',
+            ]);
+            xappsPhpAssertSame('pay_fixture_1', (string) ($embedPaymentSession['payment_session']['payment_session_id'] ?? ''));
+            $embedPaymentSessionRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('widget_token_fixture', $embedPaymentSessionRequest['query']['token'] ?? null, 'embed payment-session token mismatch');
+            xappsPhpAssertSame('gateway_checkout_default', $embedPaymentSessionRequest['payload']['payment_guard_ref'] ?? null, 'embed payment-session guard mismatch');
+
+            TestCurlShim::reset();
+            $embedFinalized = $client->finalizeEmbedMyXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'token' => 'widget_token_fixture',
+            ]);
+            xappsPhpAssertSame('settled', (string) ($embedFinalized['transaction']['status'] ?? ''), 'embed finalize transaction mismatch');
+            $embedFinalizeRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('widget_token_fixture', $embedFinalizeRequest['query']['token'] ?? null, 'embed finalize token mismatch');
+
+            TestCurlShim::reset();
+            $widgetToolResult = $client->runWidgetToolRequest([
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'toolName' => 'complete_subject_profile',
+                'payload' => ['source' => 'subject_self_profile'],
+            ]);
+            xappsPhpAssertSame('profile_fixture_1', (string) ($widgetToolResult['profile_id'] ?? ''), 'widget tool result mismatch');
+            $widgetToolRequests = TestCurlShim::$requests;
+            xappsPhpAssertSame('/v1/requests', $widgetToolRequests[0]['path'] ?? null, 'widget tool create path mismatch');
+            xappsPhpAssertSame('Bearer widget_token_fixture', $widgetToolRequests[0]['headers']['authorization'] ?? null, 'widget tool auth mismatch');
+            xappsPhpAssertSame('/v1/requests/req_widget_tool_1', $widgetToolRequests[1]['path'] ?? null, 'widget tool detail path mismatch');
+            xappsPhpAssertSame('/v1/requests/req_widget_tool_1/response', $widgetToolRequests[2]['path'] ?? null, 'widget tool response path mismatch');
+
+            TestCurlShim::reset();
+            $preparedIntent = $client->prepareXappPurchaseIntent([
+                'xappId' => 'xapp_demo',
+                'offeringId' => 'offer_demo',
+                'packageId' => 'pkg_demo',
+                'priceId' => 'price_demo',
+                'subjectId' => 'subj_fixture_1',
+                'locale' => 'ro',
+                'country' => 'RO',
+            ]);
+            xappsPhpAssertTrue(is_array($preparedIntent), 'prepared intent should return a payload array');
+            $preparedIntentRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('ro', $preparedIntentRequest['payload']['locale'] ?? null, 'prepare locale payload mismatch');
+            xappsPhpAssertSame('RO', $preparedIntentRequest['payload']['country'] ?? null, 'prepare country payload mismatch');
 
             TestCurlShim::reset();
             $walletAccounts = $client->listXappWalletAccounts([

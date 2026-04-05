@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Xapps\EmbedHostProxyService;
 use Xapps\GatewayClient;
+use Xapps\TestCurlShim;
 use Xapps\XappsSdkError;
 
 return [
@@ -66,6 +67,63 @@ return [
             ]);
             xappsPhpAssertContains('widget_token_', (string) ($refresh['token'] ?? ''), 'refresh token should be returned');
             xappsPhpAssertSame(900, (int) ($refresh['expires_in'] ?? 0));
+
+            $myMonetization = $service->getMyXappMonetization([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'locale' => 'ro',
+            ]);
+            xappsPhpAssertSame('xapp_demo', (string) ($myMonetization['xapp_id'] ?? ''));
+
+            $myHistory = $service->getMyXappMonetizationHistory([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'limit' => 8,
+            ]);
+            xappsPhpAssertSame('xapp_demo', (string) ($myHistory['xapp_id'] ?? ''));
+            xappsPhpAssertSame('intent_fixture_1', (string) ($myHistory['history']['purchase_intents']['items'][0]['id'] ?? ''));
+
+            $preparedIntent = $service->prepareMyXappPurchaseIntent([
+                'xappId' => 'xapp_demo',
+                'token' => 'widget_token_fixture',
+                'offeringId' => 'offering_fixture_1',
+                'packageId' => 'pkg_fixture_1',
+                'priceId' => 'price_fixture_1',
+                'installationId' => 'inst_fixture_1',
+            ]);
+            xappsPhpAssertSame('intent_fixture_1', (string) ($preparedIntent['prepared_intent']['purchase_intent_id'] ?? ''));
+
+            $paymentSession = $service->createMyXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'token' => 'widget_token_fixture',
+                'returnUrl' => 'https://tenant.example.test/return',
+                'installationId' => 'inst_fixture_1',
+            ]);
+            xappsPhpAssertSame('pay_fixture_1', (string) ($paymentSession['payment_session']['payment_session_id'] ?? ''));
+
+            $finalized = $service->finalizeMyXappPurchasePaymentSession([
+                'xappId' => 'xapp_demo',
+                'intentId' => 'intent_fixture_1',
+                'token' => 'widget_token_fixture',
+            ]);
+            xappsPhpAssertSame('settled', (string) ($finalized['transaction']['status'] ?? ''));
+
+            TestCurlShim::reset();
+            $widgetToolResult = $service->runWidgetToolRequest([
+                'token' => 'widget_token_fixture',
+                'installationId' => 'inst_fixture_1',
+                'toolName' => 'complete_subject_profile',
+                'payload' => ['source' => 'subject_self_profile'],
+            ]);
+            xappsPhpAssertSame('profile_fixture_1', (string) ($widgetToolResult['profile_id'] ?? ''));
+            $widgetToolRequests = TestCurlShim::$requests;
+            xappsPhpAssertSame('/v1/requests', $widgetToolRequests[0]['path'] ?? null, 'widget tool create path mismatch');
+            xappsPhpAssertSame('Bearer widget_token_fixture', $widgetToolRequests[0]['headers']['authorization'] ?? null, 'widget tool auth mismatch');
+            xappsPhpAssertSame('/v1/requests/req_widget_tool_1', $widgetToolRequests[1]['path'] ?? null, 'widget tool detail path mismatch');
+            xappsPhpAssertSame('/v1/requests/req_widget_tool_1/response', $widgetToolRequests[2]['path'] ?? null, 'widget tool response path mismatch');
 
             $installations = $service->listInstallations([
                 'subjectId' => (string) ($subject['subjectId'] ?? ''),

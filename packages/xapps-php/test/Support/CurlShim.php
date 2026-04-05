@@ -174,6 +174,38 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'POST' && $path === '/v1/requests') {
+            return self::json(200, [
+                'result' => [
+                    'request' => [
+                        'id' => 'req_widget_tool_1',
+                        'status' => 'PENDING',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && $path === '/v1/requests/req_widget_tool_1') {
+            return self::json(200, [
+                'result' => [
+                    'request' => [
+                        'id' => 'req_widget_tool_1',
+                        'status' => 'COMPLETED',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && $path === '/v1/requests/req_widget_tool_1/response') {
+            return self::json(200, [
+                'result' => [
+                    'response' => [
+                        'result' => [
+                            'profile_id' => 'profile_fixture_1',
+                            'source' => 'subject_self_profile',
+                        ],
+                    ],
+                ],
+            ]);
+        }
         if ($method === 'GET' && $path === '/v1/requests/latest') {
             return self::json(200, [
                 'result' => [
@@ -313,6 +345,76 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/entitlements$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'items' => [
+                    [
+                        'id' => 'entitlement_fixture_1',
+                        'status' => 'active',
+                        'product_slug' => 'creator_starter_unlock',
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/embed/my-xapps/([^/]+)/monetization$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'access_projection' => [
+                    'entitlement_state' => 'active',
+                    'has_current_access' => true,
+                    'credits_remaining' => 500,
+                ],
+                'current_subscription' => [
+                    'id' => 'sub_fixture_1',
+                    'status' => 'active',
+                    'package_slug' => 'creator_pro_monthly',
+                ],
+                'paywalls' => [
+                    [
+                        'slug' => 'creator_workspace_default',
+                        'packages' => [
+                            [
+                                'package_slug' => 'creator_pro_monthly',
+                                'purchase_policy' => [
+                                    'can_purchase' => false,
+                                    'status' => 'current_recurring_plan',
+                                    'transition_kind' => 'none',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        }
+        if ($method === 'GET' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/history$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'history' => [
+                    'purchase_intents' => [
+                        'total' => 1,
+                        'items' => [
+                            [
+                                'id' => 'intent_fixture_1',
+                                'status' => 'paid',
+                            ],
+                        ],
+                    ],
+                    'transactions' => [
+                        'total' => 1,
+                        'items' => [
+                            [
+                                'id' => 'txn_fixture_1',
+                                'status' => 'settled',
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+        }
         if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/wallet-accounts$#', $path, $matches) === 1) {
             return self::json(200, [
                 'xapp_id' => $matches[1],
@@ -384,6 +486,24 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'POST' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/purchase-intents/prepare$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => 'intent_fixture_1',
+                    'status' => 'created',
+                    'package' => [
+                        'id' => (string) ($payload['package_id'] ?? 'pkg_fixture_1'),
+                    ],
+                    'price' => [
+                        'id' => (string) ($payload['price_id'] ?? 'price_fixture_1'),
+                        'amount' => '29',
+                        'currency' => 'RON',
+                    ],
+                ],
+            ]);
+        }
         if ($method === 'GET' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)$#', $path, $matches) === 1) {
             return self::json(200, [
                 'xapp_id' => $matches[1],
@@ -429,6 +549,18 @@ final class TestCurlShim
                 'payment_page_url' => 'https://pay.example.test/session/' . rawurlencode('pay_' . $matches[2]),
             ]);
         }
+        if ($method === 'POST' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => [
+                    'payment_session_id' => 'pay_fixture_1',
+                    'status' => 'pending',
+                    'issuer' => (string) ($payload['issuer'] ?? 'gateway'),
+                ],
+                'payment_page_url' => 'https://pay.example.test/session/' . rawurlencode('pay_fixture_1'),
+            ]);
+        }
         if ($method === 'POST' && preg_match('#^/v1/xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session/reconcile$#', $path, $matches) === 1) {
             return self::json(200, [
                 'xapp_id' => $matches[1],
@@ -462,6 +594,27 @@ final class TestCurlShim
                 'transaction' => [
                     'id' => 'txn_' . $matches[2],
                     'status' => 'verified',
+                ],
+                'access_projection' => [
+                    'has_current_access' => true,
+                ],
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/purchase-intents/([^/]+)/payment-session/finalize$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'prepared_intent' => [
+                    'purchase_intent_id' => $matches[2],
+                    'status' => 'paid',
+                ],
+                'payment_session' => [
+                    'payment_session_id' => 'pay_fixture_1',
+                    'status' => 'completed',
+                ],
+                'transaction' => [
+                    'id' => 'txn_' . $matches[2],
+                    'status' => 'settled',
                 ],
                 'access_projection' => [
                     'has_current_access' => true,
@@ -621,6 +774,16 @@ final class TestCurlShim
             ]);
         }
         if ($method === 'POST' && $path === '/v1/publisher/bridge/token') {
+            if (
+                trim((string) ($payload['publisher_id'] ?? '')) === 'pub_conflict'
+                && (($payload['link_required'] ?? false) === true)
+            ) {
+                return self::json(409, [
+                    'message' => 'Linking required before vendor assertion minting',
+                    'code' => 'NEEDS_LINKING',
+                    'setup_url' => 'https://publisher.example.test/link',
+                ]);
+            }
             return self::json(200, [
                 'vendor_assertion' => 'vendor_assertion_fixture',
                 'issuer' => 'xapps',

@@ -13,6 +13,7 @@ return [
             $body = '{"type":"request.updated"}';
             $timestamp = '1710000000';
             $source = 'tenant-backend';
+            $nonce = 'nonce-123';
             $secret = 'strict-secret';
             $canonical = implode("\n", [
                 $method,
@@ -20,6 +21,7 @@ return [
                 $timestamp,
                 hash('sha256', $body),
                 $source,
+                $nonce,
             ]);
             $signature = rtrim(strtr(base64_encode(hash_hmac('sha256', $canonical, $secret, true)), '+/', '-_'), '=');
 
@@ -31,6 +33,7 @@ return [
                 'signature' => $signature,
                 'secret' => $secret,
                 'source' => $source,
+                'nonce' => $nonce,
                 'requireSourceInSignature' => true,
                 'allowLegacyWithoutSource' => false,
                 'nowSeconds' => 1710000000,

@@ -32,11 +32,61 @@ Current `GatewayClient` XMS helpers include:
 - `getXappMonetizationCatalog(...)`
 - `getXappMonetizationAccess(...)`
 - `getXappCurrentSubscription(...)`
+- `listXappEntitlements(...)`
 - `listXappWalletAccounts(...)`
 - `listXappWalletLedger(...)`
 - `consumeXappWalletCredits(...)`
 - purchase-intent / transaction / payment-session lifecycle helpers
 - subscription-contract reconcile / cancel / refresh helpers
+- current-user embed monetization lane:
+  - `getEmbedMyXappMonetization(...)`
+  - `getEmbedMyXappMonetizationHistory(...)`
+  - `prepareEmbedMyXappPurchaseIntent(...)`
+  - `createEmbedMyXappPurchasePaymentSession(...)`
+  - `finalizeEmbedMyXappPurchasePaymentSession(...)`
+
+Current XMS targeting-aware catalog helpers support:
+
+- `getXappMonetizationCatalog($xappIdOrInput)` where the input may include:
+  - `xappId`
+  - `subjectId`
+  - `installationId`
+  - `realmRef`
+  - `locale`
+  - `country`
+- `prepareXappPurchaseIntent(...)` with optional `locale` and `country`
+
+Current enforced gateway policy on that lane:
+
+- offering/paywall `targeting_rules`
+- price `country_rules`
+- price `trial_policy`
+- price `intro_policy`
+
+Current enforced subset:
+
+- locale include/exclude
+- country include/exclude
+- scope requirements:
+  - `require_subject`
+  - `require_installation`
+  - `require_realm`
+- first-time-only free trials for `subscription_plan` / `hybrid_plan`
+- first-time-only intro discounts for `subscription_plan` / `hybrid_plan`
+- `trial_policy` wins over `intro_policy` when both qualify
+- zero-cost qualified lanes can finalize without an external payment session
+
+Current canonical `XMS` lifecycle event family exposed through the existing
+hook system:
+
+- `xapps.xms.purchase_intent.prepared`
+- `xapps.xms.transaction.reconciled`
+- `xapps.xms.access.issued`
+- `xapps.xms.access_snapshot.refreshed`
+
+Xapps can subscribe through manifest `event_subscriptions`, and publisher-wide
+integrations can subscribe through Publisher `Events & Webhooks` on the same
+delivery rail.
 
 ## Local path install during monorepo development
 
@@ -138,6 +188,21 @@ Minimal host proxy example:
 php packages/xapps-php/examples/host-proxy/minimal.php
 ```
 
+Host plans / current-user monetization example:
+
+```bash
+php packages/xapps-php/examples/host-proxy/plans.php
+```
+
+Current `EmbedHostProxyService` host-plan helpers include:
+
+- `getMyXappMonetization(...)`
+- `getMyXappMonetizationHistory(...)`
+- `prepareMyXappPurchaseIntent(...)`
+- `createMyXappPurchasePaymentSession(...)`
+- `finalizeMyXappPurchasePaymentSession(...)`
+- `runWidgetToolRequest(...)`
+
 Request-widget bootstrap verification helper:
 
 ```php
@@ -216,6 +281,27 @@ XAPPS_SMOKE_API_KEY=xapps_test_tenant_b_key_123456789 \
 XAPPS_SMOKE_CALLBACK_TOKEN='<callback-token>' \
 XAPPS_SMOKE_REQUEST_ID='<request-id>' \
 php packages/xapps-php/examples/smoke/live.php
+```
+
+Minimal event-delivery verification example:
+
+```php
+$result = Signature::verifyXappsSignature([
+    'method' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
+    'pathWithQuery' => $_SERVER['REQUEST_URI'] ?? '/webhooks/events',
+    'body' => $rawBody,
+    'timestamp' => $_SERVER['HTTP_X_XAPPS_TS'] ?? '',
+    'signature' => $_SERVER['HTTP_X_XAPPS_SIGNATURE'] ?? '',
+    'nonce' => $_SERVER['HTTP_X_XAPPS_NONCE'] ?? '',
+    'source' => 'event_delivery',
+    'requireSourceInSignature' => true,
+    'allowLegacyWithoutSource' => true,
+    'secret' => getenv('XAPPS_ENDPOINT_SECRET') ?: '',
+]);
+
+if (!($result['ok'] ?? false)) {
+    throw new RuntimeException('Invalid event delivery signature');
+}
 ```
 
 ## Usage

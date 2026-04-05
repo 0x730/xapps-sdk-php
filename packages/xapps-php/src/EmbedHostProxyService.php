@@ -164,6 +164,85 @@ final class EmbedHostProxyService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getMyXappMonetization(array $input): array
+    {
+        return $this->gatewayClient->getEmbedMyXappMonetization([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+            'installationId' => $this->optionalString($input['installationId'] ?? null),
+            'locale' => $this->optionalString($input['locale'] ?? null),
+            'country' => $this->optionalString($input['country'] ?? null),
+            'realmRef' => $this->optionalString($input['realmRef'] ?? $input['realm_ref'] ?? null),
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function getMyXappMonetizationHistory(array $input): array
+    {
+        return $this->gatewayClient->getEmbedMyXappMonetizationHistory([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+            'limit' => isset($input['limit']) && is_numeric((string) $input['limit']) ? (int) $input['limit'] : null,
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function prepareMyXappPurchaseIntent(array $input): array
+    {
+        return $this->gatewayClient->prepareEmbedMyXappPurchaseIntent([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+            'offeringId' => $this->optionalString($input['offeringId'] ?? $input['offering_id'] ?? null),
+            'packageId' => $this->optionalString($input['packageId'] ?? $input['package_id'] ?? null),
+            'priceId' => $this->optionalString($input['priceId'] ?? $input['price_id'] ?? null),
+            'installationId' => $this->optionalString($input['installationId'] ?? $input['installation_id'] ?? null),
+            'locale' => $this->optionalString($input['locale'] ?? null),
+            'country' => $this->optionalString($input['country'] ?? null),
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function createMyXappPurchasePaymentSession(array $input): array
+    {
+        return $this->gatewayClient->createEmbedMyXappPurchasePaymentSession([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'intentId' => $this->requireTrimmedString($input['intentId'] ?? null, 'intentId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+            'returnUrl' => $this->optionalString($input['returnUrl'] ?? $input['return_url'] ?? null),
+            'cancelUrl' => $this->optionalString($input['cancelUrl'] ?? $input['cancel_url'] ?? null),
+            'xappsResume' => $this->optionalString($input['xappsResume'] ?? $input['xapps_resume'] ?? null),
+            'locale' => $this->optionalString($input['locale'] ?? null),
+            'installationId' => $this->optionalString($input['installationId'] ?? $input['installation_id'] ?? null),
+            'paymentGuardRef' => $this->optionalString($input['paymentGuardRef'] ?? $input['payment_guard_ref'] ?? null),
+            'issuer' => $this->optionalString($input['issuer'] ?? null),
+            'scheme' => $this->optionalString($input['scheme'] ?? null),
+            'paymentScheme' => $this->optionalString($input['paymentScheme'] ?? $input['payment_scheme'] ?? null),
+            'metadata' => is_array($input['metadata'] ?? null) ? $input['metadata'] : null,
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function finalizeMyXappPurchasePaymentSession(array $input): array
+    {
+        return $this->gatewayClient->finalizeEmbedMyXappPurchasePaymentSession([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'intentId' => $this->requireTrimmedString($input['intentId'] ?? null, 'intentId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function runWidgetToolRequest(array $input): array
+    {
+        return $this->gatewayClient->runWidgetToolRequest([
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+            'installationId' => $this->requireTrimmedString($input['installationId'] ?? $input['installation_id'] ?? null, 'installationId'),
+            'toolName' => $this->requireTrimmedString($input['toolName'] ?? $input['tool_name'] ?? null, 'toolName'),
+            'payload' => is_array($input['payload'] ?? null) ? $input['payload'] : [],
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
     public function bridgeSign(array $input): array
     {
         if (isset($input['envelope']) && is_array($input['envelope'])) {

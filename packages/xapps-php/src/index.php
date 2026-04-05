@@ -15,6 +15,7 @@ require_once __DIR__ . '/PaymentProviderCredentials.php';
 require_once __DIR__ . '/ManagedGatewayPaymentSession.php';
 require_once __DIR__ . '/HostedGatewayPaymentSession.php';
 require_once __DIR__ . '/PaymentPolicySupport.php';
+require_once __DIR__ . '/XmsEvents.php';
 require_once __DIR__ . '/PaymentSessionStoreInterface.php';
 require_once __DIR__ . '/InMemoryPaymentSessionStore.php';
 require_once __DIR__ . '/FilePaymentSessionStore.php';
