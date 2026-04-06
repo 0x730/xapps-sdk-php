@@ -217,6 +217,8 @@ final class GatewayClient
                 'hint' => isset($input['identifier']['hint']) ? (string) $input['identifier']['hint'] : null,
             ],
             'email' => isset($input['email']) ? (string) $input['email'] : null,
+            'metadata' => (isset($input['metadata']) && is_array($input['metadata'])) ? $input['metadata'] : null,
+            'linkId' => isset($input['linkId']) ? (string) $input['linkId'] : null,
         ]);
         $payload = $this->extractGatewayResult($response, 'resolveSubject');
         $subjectId = trim((string) ($payload['subjectId'] ?? ''));

@@ -71,6 +71,28 @@ return [
             xappsPhpAssertContains('subj_', (string) ($resolved['subjectId'] ?? ''), 'subject id should be returned');
 
             TestCurlShim::reset();
+            $resolvedExternal = $client->resolveSubject([
+                'type' => 'business_member',
+                'identifier' => [
+                    'idType' => 'tenant_member_id',
+                    'value' => 'acct_123',
+                    'hint' => 'Account 123',
+                ],
+                'email' => 'billing@example.com',
+                'metadata' => ['company_ref' => 'company_a'],
+                'linkId' => 'tenant-link-123',
+            ]);
+            xappsPhpAssertContains('subj_', (string) ($resolvedExternal['subjectId'] ?? ''), 'external subject id should be returned');
+            $resolveRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('business_member', $resolveRequest['payload']['type'] ?? null, 'resolve type mismatch');
+            xappsPhpAssertSame('tenant_member_id', $resolveRequest['payload']['identifier']['idType'] ?? null, 'resolve identifier type mismatch');
+            xappsPhpAssertSame('acct_123', $resolveRequest['payload']['identifier']['value'] ?? null, 'resolve identifier value mismatch');
+            xappsPhpAssertSame('Account 123', $resolveRequest['payload']['identifier']['hint'] ?? null, 'resolve identifier hint mismatch');
+            xappsPhpAssertSame('billing@example.com', $resolveRequest['payload']['email'] ?? null, 'resolve email mismatch');
+            xappsPhpAssertSame('company_a', $resolveRequest['payload']['metadata']['company_ref'] ?? null, 'resolve metadata mismatch');
+            xappsPhpAssertSame('tenant-link-123', $resolveRequest['payload']['linkId'] ?? null, 'resolve linkId mismatch');
+
+            TestCurlShim::reset();
             $catalog = $client->createCatalogSession([
                 'origin' => 'http://localhost:3312',
                 'subjectId' => (string) ($resolved['subjectId'] ?? ''),

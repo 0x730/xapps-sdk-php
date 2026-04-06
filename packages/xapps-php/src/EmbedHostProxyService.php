@@ -91,23 +91,47 @@ final class EmbedHostProxyService
         ];
     }
 
-    /** @param array<string,mixed> $input @return array{subjectId:string,email:string,name:?string} */
+    /** @param array<string,mixed> $input @return array{subjectId:string,email:?string,name:?string} */
     public function resolveSubject(array $input): array
     {
-        $email = strtolower($this->requireTrimmedString($input['email'] ?? null, 'email'));
+        $subjectId = $this->optionalString($input['subjectId'] ?? null);
+        $email = $this->optionalString($input['email'] ?? null);
+        $email = $email !== null ? strtolower($email) : null;
+        $name = $this->optionalString($input['name'] ?? null);
+        if ($subjectId !== null) {
+            return [
+                'subjectId' => $subjectId,
+                'email' => $email,
+                'name' => $name,
+            ];
+        }
+
+        $identifier = is_array($input['identifier'] ?? null) ? $input['identifier'] : [];
+        $identifierIdType = $this->optionalString($identifier['idType'] ?? null)
+            ?? (($email !== null && $email !== '') ? 'email' : null);
+        $identifierValue = $this->optionalString($identifier['value'] ?? null)
+            ?? (($identifierIdType === 'email') ? $email : null);
+        if ($identifierIdType === null || $identifierValue === null) {
+            throw new XappsSdkError(
+                XappsSdkError::INVALID_ARGUMENT,
+                'subjectId or identifier.idType + identifier.value (or email) is required',
+            );
+        }
         $result = $this->gatewayClient->resolveSubject([
-            'type' => 'user',
+            'type' => $this->optionalString($input['type'] ?? null) ?? 'user',
             'identifier' => [
-                'idType' => 'email',
-                'value' => $email,
-                'hint' => $email,
+                'idType' => $identifierIdType,
+                'value' => $identifierValue,
+                'hint' => $this->optionalString($identifier['hint'] ?? null),
             ],
             'email' => $email,
+            'metadata' => (isset($input['metadata']) && is_array($input['metadata'])) ? $input['metadata'] : null,
+            'linkId' => $this->optionalString($input['linkId'] ?? null),
         ]);
         return [
             'subjectId' => (string) ($result['subjectId'] ?? ''),
             'email' => $email,
-            'name' => $this->optionalString($input['name'] ?? null),
+            'name' => $name,
         ];
     }
 

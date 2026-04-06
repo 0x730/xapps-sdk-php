@@ -52,6 +52,33 @@ return [
             xappsPhpAssertContains('subj_', (string) ($subject['subjectId'] ?? ''), 'subject id should be returned');
             xappsPhpAssertSame('demo@example.com', (string) ($subject['email'] ?? ''));
 
+            TestCurlShim::reset();
+            $externalSubject = $service->resolveSubject([
+                'type' => 'business_member',
+                'identifier' => [
+                    'idType' => 'tenant_member_id',
+                    'value' => 'acct_123',
+                    'hint' => 'Account 123',
+                ],
+                'email' => 'billing@example.com',
+                'metadata' => ['company_ref' => 'company_a'],
+                'linkId' => 'tenant-link-123',
+            ]);
+            xappsPhpAssertContains('subj_', (string) ($externalSubject['subjectId'] ?? ''), 'external subject id should be returned');
+            $resolveRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame('business_member', $resolveRequest['payload']['type'] ?? null, 'resolve type mismatch');
+            xappsPhpAssertSame('tenant_member_id', $resolveRequest['payload']['identifier']['idType'] ?? null, 'resolve identifier type mismatch');
+            xappsPhpAssertSame('acct_123', $resolveRequest['payload']['identifier']['value'] ?? null, 'resolve identifier value mismatch');
+            xappsPhpAssertSame('company_a', $resolveRequest['payload']['metadata']['company_ref'] ?? null, 'resolve metadata mismatch');
+            xappsPhpAssertSame('tenant-link-123', $resolveRequest['payload']['linkId'] ?? null, 'resolve linkId mismatch');
+
+            $directSubject = $service->resolveSubject([
+                'subjectId' => 'subj_direct_123',
+                'email' => 'billing@example.com',
+            ]);
+            xappsPhpAssertSame('subj_direct_123', (string) ($directSubject['subjectId'] ?? ''));
+            xappsPhpAssertSame('billing@example.com', (string) ($directSubject['email'] ?? ''));
+
             $catalog = $service->createCatalogSession([
                 'origin' => 'http://localhost:3312',
                 'subjectId' => (string) ($subject['subjectId'] ?? ''),
