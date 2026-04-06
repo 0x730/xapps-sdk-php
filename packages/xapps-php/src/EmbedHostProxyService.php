@@ -15,6 +15,8 @@ final class EmbedHostProxyService
     private $signCallback;
     /** @var callable|null */
     private $vendorAssertionCallback;
+    /** @var callable|null */
+    private $resolveInstallationPolicyCallback;
 
     /** @param array<string,mixed> $options */
     public function __construct(GatewayClient $gatewayClient, array $options = [])
@@ -31,6 +33,9 @@ final class EmbedHostProxyService
         $this->signCallback = is_callable($options['sign'] ?? null) ? $options['sign'] : null;
         $this->vendorAssertionCallback = is_callable($options['vendorAssertion'] ?? null)
             ? $options['vendorAssertion']
+            : null;
+        $this->resolveInstallationPolicyCallback = is_callable($options['resolveInstallationPolicy'] ?? null)
+            ? $options['resolveInstallationPolicy']
             : null;
     }
 
@@ -55,6 +60,35 @@ final class EmbedHostProxyService
             $result['gatewayUrl'] = $this->gatewayUrl;
         }
         return $result;
+    }
+
+    /** @return array<string,mixed> */
+    public function getHostConfigForRequest(array $request = []): array
+    {
+        $result = $this->getHostConfig();
+        $resolved = $this->resolveInstallationPolicy();
+        if ($resolved !== null) {
+            $result['installationPolicy'] = $resolved;
+        }
+        return $result;
+    }
+
+    /** @return array{mode:string,update_mode:string}|null */
+    private function resolveInstallationPolicy(): ?array
+    {
+        if (!is_callable($this->resolveInstallationPolicyCallback)) {
+            return null;
+        }
+        $resolved = call_user_func($this->resolveInstallationPolicyCallback);
+        if (!is_array($resolved)) {
+            return null;
+        }
+        return [
+            'mode' => (($resolved['mode'] ?? null) === 'auto_available') ? 'auto_available' : 'manual',
+            'update_mode' => (($resolved['update_mode'] ?? null) === 'auto_update_compatible')
+                ? 'auto_update_compatible'
+                : 'manual',
+        ];
     }
 
     /** @param array<string,mixed> $input @return array{subjectId:string,email:string,name:?string} */

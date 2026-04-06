@@ -270,6 +270,33 @@ final class GatewayClient
         ];
     }
 
+    /** @return array{client:array<string,mixed>} */
+    public function getClientSelf(): array
+    {
+        $response = $this->get('/v1/client-self');
+        $payload = $this->extractGatewayResult($response, 'getClientSelf');
+        $client = (isset($payload['client']) && is_array($payload['client'])) ? $payload['client'] : null;
+        if (!is_array($client) || trim((string) ($client['id'] ?? '')) === '') {
+            throw new XappsSdkError(
+                XappsSdkError::GATEWAY_API_INVALID_RESPONSE,
+                'Gateway getClientSelf returned malformed response',
+                $response['status'],
+                false,
+                ['payload' => $payload],
+            );
+        }
+        $policy = (isset($client['installation_policy']) && is_array($client['installation_policy']))
+            ? $client['installation_policy']
+            : [];
+        $client['installation_policy'] = [
+            'mode' => (($policy['mode'] ?? null) === 'auto_available') ? 'auto_available' : 'manual',
+            'update_mode' => (($policy['update_mode'] ?? null) === 'auto_update_compatible')
+                ? 'auto_update_compatible'
+                : 'manual',
+        ];
+        return ['client' => $client];
+    }
+
     /** @param array<string,mixed> $input @return array{token:string,embedUrl:string,context?:array<string,mixed>,widget?:array<string,mixed>,tool?:array<string,mixed>|null} */
     public function createWidgetSession(array $input): array
     {

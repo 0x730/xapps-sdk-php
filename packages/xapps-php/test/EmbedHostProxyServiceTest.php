@@ -14,6 +14,10 @@ return [
             $gateway = new GatewayClient(xappsPhpTestBaseUrl(), 'gateway-key');
             $service = new EmbedHostProxyService($gateway, [
                 'gatewayUrl' => xappsPhpTestBaseUrl(),
+                'resolveInstallationPolicy' => static fn (): array => [
+                    'mode' => 'auto_available',
+                    'update_mode' => 'auto_update_compatible',
+                ],
                 'sign' => static fn (array $input): array => [
                     'ok' => true,
                     'envelope' => ['signed' => true, 'data' => $input['data'] ?? null],
@@ -29,6 +33,14 @@ return [
             xappsPhpAssertTrue(($config['ok'] ?? false) === true, 'host config should return ok');
             xappsPhpAssertSame(xappsPhpTestBaseUrl(), (string) ($config['gatewayUrl'] ?? ''));
             xappsPhpAssertSame('single-panel', (string) (($config['hostModes'][0]['key'] ?? '')));
+            xappsPhpAssertTrue(!isset($config['installationPolicy']), 'static host config should stay slim');
+
+            $requestConfig = $service->getHostConfigForRequest([]);
+            xappsPhpAssertSame('auto_available', (string) ($requestConfig['installationPolicy']['mode'] ?? ''));
+            xappsPhpAssertSame(
+                'auto_update_compatible',
+                (string) ($requestConfig['installationPolicy']['update_mode'] ?? ''),
+            );
 
             $headers = $service->getNoStoreHeaders();
             xappsPhpAssertSame('no-store, no-cache, must-revalidate', (string) ($headers['Cache-Control'] ?? ''));

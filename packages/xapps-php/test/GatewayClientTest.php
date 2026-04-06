@@ -82,6 +82,14 @@ return [
             xappsPhpAssertSame(['xplace'], $catalogRequest['payload']['publishers'] ?? null, 'catalog publishers should be normalized');
             xappsPhpAssertSame(['featured'], $catalogRequest['payload']['tags'] ?? null, 'catalog tags should be normalized');
 
+            $clientSelf = $client->getClientSelf();
+            xappsPhpAssertSame('client_fixture_1', (string) ($clientSelf['client']['id'] ?? ''));
+            xappsPhpAssertSame('auto_available', (string) ($clientSelf['client']['installation_policy']['mode'] ?? ''));
+            xappsPhpAssertSame(
+                'auto_update_compatible',
+                (string) ($clientSelf['client']['installation_policy']['update_mode'] ?? ''),
+            );
+
             TestCurlShim::reset();
             $widget = $client->createWidgetSession([
                 'installationId' => 'inst_fixture_1',

@@ -156,6 +156,21 @@ final class TestCurlShim
                 ],
             ]);
         }
+        if ($method === 'GET' && $path === '/v1/client-self') {
+            return self::json(200, [
+                'result' => [
+                    'client' => [
+                        'id' => 'client_fixture_1',
+                        'slug' => 'tenant-fixture',
+                        'status' => 'active',
+                        'installation_policy' => [
+                            'mode' => 'auto_available',
+                            'update_mode' => 'auto_update_compatible',
+                        ],
+                    ],
+                ],
+            ]);
+        }
         if ($method === 'POST' && $path === '/v1/widget-sessions') {
             $installationId = trim((string) ($payload['installationId'] ?? 'inst_fixture'));
             $widgetId = trim((string) ($payload['widgetId'] ?? 'widget_fixture'));
