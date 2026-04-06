@@ -30,14 +30,19 @@ function xapps_backend_kit_register_host_api_core(array &$routes, array $app, ar
                 $body = xapps_backend_kit_read_record($request['body']);
                 $bootstrapRequest = xapps_backend_kit_require_host_bootstrap_request($request, $bootstrap);
                 $resolved = $app['hostProxyService']->resolveSubject([
+                    'subjectId' => $body['subjectId'] ?? null,
+                    'type' => $body['type'] ?? null,
+                    'identifier' => is_array($body['identifier'] ?? null) ? $body['identifier'] : null,
                     'email' => $body['email'] ?? null,
                     'name' => $body['name'] ?? null,
+                    'metadata' => is_array($body['metadata'] ?? null) ? $body['metadata'] : null,
+                    'linkId' => $body['linkId'] ?? ($body['link_id'] ?? null),
                 ]);
                 xapps_backend_kit_send_json(
                     xapps_backend_kit_build_host_bootstrap_result([
                         'subjectId' => $resolved['subjectId'] ?? null,
-                        'email' => $body['email'] ?? null,
-                        'name' => $body['name'] ?? null,
+                        'email' => $resolved['email'] ?? ($body['email'] ?? null),
+                        'name' => $resolved['name'] ?? ($body['name'] ?? null),
                         'origin' => $body['origin'] ?? null,
                         'signingSecret' => $bootstrapRequest['signingSecret'],
                         'ttlSeconds' => $bootstrapRequest['ttlSeconds'],
@@ -59,8 +64,13 @@ function xapps_backend_kit_register_host_api_core(array &$routes, array $app, ar
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $result = $app['hostProxyService']->resolveSubject([
+                    'subjectId' => $body['subjectId'] ?? null,
+                    'type' => $body['type'] ?? null,
+                    'identifier' => is_array($body['identifier'] ?? null) ? $body['identifier'] : null,
                     'email' => $body['email'] ?? null,
                     'name' => $body['name'] ?? null,
+                    'metadata' => is_array($body['metadata'] ?? null) ? $body['metadata'] : null,
+                    'linkId' => $body['linkId'] ?? ($body['link_id'] ?? null),
                 ]);
                 xapps_backend_kit_send_json(
                     xapps_backend_kit_subject_result($result, $body),

@@ -146,7 +146,7 @@ function xapps_backend_kit_require_host_bootstrap_request(array $request, array 
 function xapps_backend_kit_build_host_bootstrap_result(array $input): array
 {
     $subjectId = xapps_backend_kit_read_string($input['subjectId'] ?? null);
-    $email = xapps_backend_kit_read_string($input['email'] ?? null);
+    $email = xapps_backend_kit_optional_string($input['email'] ?? null);
     $name = xapps_backend_kit_optional_string($input['name'] ?? null);
     $origin = xapps_backend_kit_normalize_origin($input['origin'] ?? null);
     $ttlSeconds = (int) ($input['ttlSeconds'] ?? 300);
