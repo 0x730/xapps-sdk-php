@@ -47,12 +47,22 @@ final class BackendHostProxy
         $gatewayUrl = trim(BackendSupport::readString($gateway['baseUrl'] ?? null, BackendSupport::readString($config['gatewayUrl'] ?? null)));
         $apiKey = trim(BackendSupport::readString($gateway['apiKey'] ?? null, BackendSupport::readString($config['gatewayApiKey'] ?? null)));
         $hostModes = BackendSupport::normalizeHostModes($reference['hostSurfaces'] ?? null);
+        $gatewayClient = $createGatewayClient($gatewayUrl, $apiKey);
 
         return $createEmbedHostProxyService(
-            $createGatewayClient($gatewayUrl, $apiKey),
+            $gatewayClient,
             [
                 'gatewayUrl' => $gatewayUrl,
                 'hostModes' => count($hostModes) > 0 ? $hostModes : null,
+                'resolveInstallationPolicy' => static function () use ($gatewayClient): ?array {
+                    if (!method_exists($gatewayClient, 'getClientSelf')) {
+                        return null;
+                    }
+                    $resolved = $gatewayClient->getClientSelf();
+                    return is_array($resolved['client']['installation_policy'] ?? null)
+                        ? $resolved['client']['installation_policy']
+                        : null;
+                },
             ],
         );
     }

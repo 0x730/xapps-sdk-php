@@ -11,8 +11,11 @@ function xapps_backend_kit_register_host_api_core(array &$routes, array $app, ar
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            $config = method_exists($app['hostProxyService'], 'getHostConfigForRequest')
+                ? $app['hostProxyService']->getHostConfigForRequest($request)
+                : $app['hostProxyService']->getHostConfig();
             xapps_backend_kit_send_json(
-                $app['hostProxyService']->getHostConfig(),
+                $config,
                 200,
                 xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
             );
