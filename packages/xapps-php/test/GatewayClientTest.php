@@ -69,6 +69,9 @@ return [
                 'email' => 'demo@example.com',
             ]);
             xappsPhpAssertContains('subj_', (string) ($resolved['subjectId'] ?? ''), 'subject id should be returned');
+            $resolveRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame(false, array_key_exists('metadata', $resolveRequest['payload'] ?? []), 'empty resolve metadata should be omitted');
+            xappsPhpAssertSame(false, array_key_exists('linkId', $resolveRequest['payload'] ?? []), 'empty resolve linkId should be omitted');
 
             TestCurlShim::reset();
             $resolvedExternal = $client->resolveSubject([

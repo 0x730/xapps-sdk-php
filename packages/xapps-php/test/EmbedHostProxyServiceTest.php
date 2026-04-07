@@ -72,11 +72,12 @@ return [
             xappsPhpAssertSame('company_a', $resolveRequest['payload']['metadata']['company_ref'] ?? null, 'resolve metadata mismatch');
             xappsPhpAssertSame('tenant-link-123', $resolveRequest['payload']['linkId'] ?? null, 'resolve linkId mismatch');
 
+            $expectedBillingSubjectId = 'subj_' . substr(md5('billing@example.com'), 0, 12);
             $directSubject = $service->resolveSubject([
-                'subjectId' => 'subj_direct_123',
+                'subjectId' => $expectedBillingSubjectId,
                 'email' => 'billing@example.com',
             ]);
-            xappsPhpAssertSame('subj_direct_123', (string) ($directSubject['subjectId'] ?? ''));
+            xappsPhpAssertSame($expectedBillingSubjectId, (string) ($directSubject['subjectId'] ?? ''));
             xappsPhpAssertSame('billing@example.com', (string) ($directSubject['email'] ?? ''));
 
             $catalog = $service->createCatalogSession([
@@ -209,6 +210,21 @@ return [
                 throw new RuntimeException('Expected createCatalogSession to throw');
             } catch (XappsSdkError $error) {
                 xappsPhpAssertSame(XappsSdkError::INVALID_ARGUMENT, $error->errorCode);
+            }
+            try {
+                $service->resolveSubject(['subjectId' => 'subj_direct']);
+                throw new RuntimeException('Expected resolveSubject to reject unvalidated direct subject id');
+            } catch (XappsSdkError $error) {
+                xappsPhpAssertSame(XappsSdkError::INVALID_ARGUMENT, $error->errorCode);
+            }
+            try {
+                $service->resolveSubject([
+                    'subjectId' => 'subj_direct',
+                    'email' => 'billing@example.com',
+                ]);
+                throw new RuntimeException('Expected resolveSubject to reject mismatched subject id');
+            } catch (XappsSdkError $error) {
+                xappsPhpAssertSame(403, $error->status);
             }
         },
     ],

@@ -209,17 +209,17 @@ final class GatewayClient
         if ($idType === '' || $identifierValue === '') {
             throw new XappsSdkError(XappsSdkError::INVALID_ARGUMENT, 'identifier.idType and identifier.value are required');
         }
-        $response = $this->post('/v1/subjects/resolve', [
+        $response = $this->post('/v1/subjects/resolve', self::withoutNullValues([
             'type' => (string) ($input['type'] ?? 'user'),
-            'identifier' => [
+            'identifier' => self::withoutNullValues([
                 'idType' => $idType,
                 'value' => $identifierValue,
                 'hint' => isset($input['identifier']['hint']) ? (string) $input['identifier']['hint'] : null,
-            ],
+            ]),
             'email' => isset($input['email']) ? (string) $input['email'] : null,
             'metadata' => (isset($input['metadata']) && is_array($input['metadata'])) ? $input['metadata'] : null,
             'linkId' => isset($input['linkId']) ? (string) $input['linkId'] : null,
-        ]);
+        ]));
         $payload = $this->extractGatewayResult($response, 'resolveSubject');
         $subjectId = trim((string) ($payload['subjectId'] ?? ''));
         if ($subjectId === '') {

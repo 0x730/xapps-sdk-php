@@ -98,19 +98,18 @@ final class EmbedHostProxyService
         $email = $this->optionalString($input['email'] ?? null);
         $email = $email !== null ? strtolower($email) : null;
         $name = $this->optionalString($input['name'] ?? null);
-        if ($subjectId !== null) {
-            return [
-                'subjectId' => $subjectId,
-                'email' => $email,
-                'name' => $name,
-            ];
-        }
 
         $identifier = is_array($input['identifier'] ?? null) ? $input['identifier'] : [];
         $identifierIdType = $this->optionalString($identifier['idType'] ?? null)
             ?? (($email !== null && $email !== '') ? 'email' : null);
         $identifierValue = $this->optionalString($identifier['value'] ?? null)
             ?? (($identifierIdType === 'email') ? $email : null);
+        if ($subjectId !== null && ($identifierIdType === null || $identifierValue === null)) {
+            throw new XappsSdkError(
+                XappsSdkError::INVALID_ARGUMENT,
+                'subjectId requires identifier.idType + identifier.value or email for validation',
+            );
+        }
         if ($identifierIdType === null || $identifierValue === null) {
             throw new XappsSdkError(
                 XappsSdkError::INVALID_ARGUMENT,
@@ -128,8 +127,17 @@ final class EmbedHostProxyService
             'metadata' => (isset($input['metadata']) && is_array($input['metadata'])) ? $input['metadata'] : null,
             'linkId' => $this->optionalString($input['linkId'] ?? null),
         ]);
+        $resolvedSubjectId = (string) ($result['subjectId'] ?? '');
+        if ($subjectId !== null && $resolvedSubjectId !== $subjectId) {
+            throw new XappsSdkError(
+                XappsSdkError::INVALID_ARGUMENT,
+                'subjectId does not match the resolved subject for the provided identity',
+                403,
+                false,
+            );
+        }
         return [
-            'subjectId' => (string) ($result['subjectId'] ?? ''),
+            'subjectId' => $resolvedSubjectId,
             'email' => $email,
             'name' => $name,
         ];
