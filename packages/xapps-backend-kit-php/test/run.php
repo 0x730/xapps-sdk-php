@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 
 $files = [
+    __DIR__ . '/HostProxyTest.php',
     __DIR__ . '/HostApiLifecycleTest.php',
 ];
 
