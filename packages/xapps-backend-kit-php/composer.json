@@ -1,6 +1,6 @@
 {
   "name": "xapps-platform/xapps-backend-kit",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Modular PHP backend kit for the current Xapps backend contract (tenant surface today, shared actor-adapter direction later)",
   "type": "library",
   "license": "MIT",
