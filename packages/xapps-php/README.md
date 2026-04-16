@@ -12,6 +12,10 @@ Use `xapps-platform/xapps-php` when you want lower-level PHP primitives for gate
 
 If you want a higher-level packaged backend contract with default routes and mode assembly, use `xapps-platform/xapps-backend-kit` instead.
 
+For the current XMS system behavior and API reader path, read:
+
+- [docs/specifications/xms/README.md](/home/dacrise/x/xapps/docs/specifications/xms/README.md)
+
 ## Scope (MVP)
 
 - Dispatch payload parsing (`Xapps\\Dispatch::parseRequest`)

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 function xapps_backend_kit_register_host_api_core(array &$routes, array $app, array $allowedOrigins = [], array $bootstrap = []): void
 {
+    $subjectProfiles = xapps_backend_kit_read_record($app['subjectProfileOptions'] ?? []);
+    $resolveCatalogCustomerProfile = $subjectProfiles['resolveCatalogCustomerProfile'] ?? null;
+
     $routes[] = [
         'method' => 'GET',
         'path' => '/api/host-config',
@@ -100,12 +103,73 @@ function xapps_backend_kit_register_host_api_core(array &$routes, array $app, ar
                         'xappId' => $body['xappId'] ?? null,
                         'publishers' => is_array($body['publishers'] ?? null) ? $body['publishers'] : null,
                         'tags' => is_array($body['tags'] ?? null) ? $body['tags'] : null,
+                        'customerProfile' => is_array($body['customerProfile'] ?? null)
+                            ? $body['customerProfile']
+                            : null,
                     ]),
                     201,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
                 );
             } catch (\Throwable $error) {
                 xapps_backend_kit_send_service_error($error, 'create-catalog-session failed');
+            }
+        },
+    ];
+
+    $routes[] = [
+        'method' => 'POST',
+        'path' => '/api/catalog-customer-profile',
+        'handler' => static function (array $request) use ($allowedOrigins, $bootstrap, $resolveCatalogCustomerProfile): void {
+            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+                return;
+            }
+            try {
+                $body = xapps_backend_kit_read_record($request['body']);
+                $bootstrapContext = xapps_backend_kit_read_host_bootstrap_context($request, $bootstrap);
+                $subjectId = xapps_backend_kit_read_string(
+                    $bootstrapContext['subjectId'] ?? null,
+                    $body['subjectId'] ?? null,
+                );
+                if ($subjectId === '') {
+                    xapps_backend_kit_send_json(
+                        ['ok' => true, 'customerProfile' => null],
+                        200,
+                        xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
+                    );
+                    return;
+                }
+                if (!is_callable($resolveCatalogCustomerProfile)) {
+                    xapps_backend_kit_send_json(
+                        ['ok' => true, 'customerProfile' => null],
+                        200,
+                        xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
+                    );
+                    return;
+                }
+                $resolved = call_user_func($resolveCatalogCustomerProfile, [
+                    'subjectId' => $subjectId,
+                    'xappId' => xapps_backend_kit_read_string($body['xappId'] ?? null),
+                    'profileFamily' => xapps_backend_kit_read_string(
+                        $body['profile_family'] ?? null,
+                        $body['profileFamily'] ?? null,
+                    ),
+                    'xappSlug' => xapps_backend_kit_read_string(
+                        $body['xapp_slug'] ?? null,
+                        $body['xappSlug'] ?? null,
+                    ),
+                    'toolName' => xapps_backend_kit_read_string(
+                        $body['tool_name'] ?? null,
+                        $body['toolName'] ?? null,
+                    ),
+                ]);
+                $customerProfile = xapps_backend_kit_read_record($resolved);
+                xapps_backend_kit_send_json(
+                    ['ok' => true, 'customerProfile' => count($customerProfile) > 0 ? $customerProfile : null],
+                    200,
+                    xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
+                );
+            } catch (\Throwable $error) {
+                xapps_backend_kit_send_service_error($error, 'catalog-customer-profile failed');
             }
         },
     ];

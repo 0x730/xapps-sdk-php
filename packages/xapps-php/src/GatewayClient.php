@@ -253,6 +253,9 @@ final class GatewayClient
             'xappId' => isset($input['xappId']) ? (string) $input['xappId'] : null,
             'publishers' => $publishers,
             'tags' => $tags,
+            'customerProfile' => is_array($input['customerProfile'] ?? null)
+                ? $input['customerProfile']
+                : null,
         ]));
         $payload = $this->extractGatewayResult($response, 'createCatalogSession');
         $token = trim((string) ($payload['token'] ?? ''));
@@ -570,6 +573,32 @@ final class GatewayClient
             [],
         );
         return $this->extractGatewayResult($response, 'finalizeEmbedMyXappPurchasePaymentSession');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function cancelEmbedMyXappSubscriptionContract(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedContractId = self::requireNonEmptyString((string) ($input['contractId'] ?? $input['contract_id'] ?? ''), 'contractId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $response = $this->post(
+            '/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/subscription-contracts/' . rawurlencode($resolvedContractId) . '/cancel?token=' . rawurlencode($token),
+            [],
+        );
+        return $this->extractGatewayResult($response, 'cancelEmbedMyXappSubscriptionContract');
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function refreshEmbedMyXappSubscriptionContractState(array $input): array
+    {
+        $resolvedXappId = self::requireNonEmptyString((string) ($input['xappId'] ?? $input['xapp_id'] ?? ''), 'xappId');
+        $resolvedContractId = self::requireNonEmptyString((string) ($input['contractId'] ?? $input['contract_id'] ?? ''), 'contractId');
+        $token = self::requireNonEmptyString((string) ($input['token'] ?? ''), 'token');
+        $response = $this->post(
+            '/embed/my-xapps/' . rawurlencode($resolvedXappId) . '/monetization/subscription-contracts/' . rawurlencode($resolvedContractId) . '/refresh-state?token=' . rawurlencode($token),
+            [],
+        );
+        return $this->extractGatewayResult($response, 'refreshEmbedMyXappSubscriptionContractState');
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */

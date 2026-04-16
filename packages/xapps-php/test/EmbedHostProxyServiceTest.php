@@ -83,8 +83,18 @@ return [
             $catalog = $service->createCatalogSession([
                 'origin' => 'http://localhost:3312',
                 'subjectId' => (string) ($subject['subjectId'] ?? ''),
+                'customerProfile' => [
+                    'profile_family' => 'billing_business',
+                    'country_code' => 'RO',
+                ],
             ]);
             xappsPhpAssertContains('catalog_token_', (string) ($catalog['token'] ?? ''), 'catalog token should be returned');
+            $catalogRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
+            xappsPhpAssertSame(
+                'RO',
+                $catalogRequest['payload']['customerProfile']['country_code'] ?? null,
+                'embed host proxy should forward catalog customer profile',
+            );
 
             $widget = $service->createWidgetSession([
                 'installationId' => 'inst_fixture_1',
@@ -124,6 +134,20 @@ return [
             ]);
             xappsPhpAssertSame('xapp_demo', (string) ($myHistory['xapp_id'] ?? ''));
             xappsPhpAssertSame('intent_fixture_1', (string) ($myHistory['history']['purchase_intents']['items'][0]['id'] ?? ''));
+
+            $refreshedSubscription = $service->refreshMyXappSubscriptionContractState([
+                'xappId' => 'xapp_demo',
+                'contractId' => 'contract_fixture_1',
+                'token' => 'widget_token_fixture',
+            ]);
+            xappsPhpAssertSame('past_due', (string) ($refreshedSubscription['subscription_contract']['status'] ?? ''));
+
+            $cancelledSubscription = $service->cancelMyXappSubscriptionContract([
+                'xappId' => 'xapp_demo',
+                'contractId' => 'contract_fixture_1',
+                'token' => 'widget_token_fixture',
+            ]);
+            xappsPhpAssertSame('cancelled', (string) ($cancelledSubscription['subscription_contract']['status'] ?? ''));
 
             $preparedIntent = $service->prepareMyXappPurchaseIntent([
                 'xappId' => 'xapp_demo',

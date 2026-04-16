@@ -101,11 +101,20 @@ return [
                 'subjectId' => (string) ($resolved['subjectId'] ?? ''),
                 'publishers' => ['', 'xplace', ' xplace ', '   '],
                 'tags' => ['featured', '', ' featured '],
+                'customerProfile' => [
+                    'profile_family' => 'billing_business',
+                    'country_code' => 'RO',
+                ],
             ]);
             xappsPhpAssertContains('catalog_token_', (string) ($catalog['token'] ?? ''), 'catalog token should be returned');
             $catalogRequest = TestCurlShim::$requests[count(TestCurlShim::$requests) - 1] ?? null;
             xappsPhpAssertSame(['xplace'], $catalogRequest['payload']['publishers'] ?? null, 'catalog publishers should be normalized');
             xappsPhpAssertSame(['featured'], $catalogRequest['payload']['tags'] ?? null, 'catalog tags should be normalized');
+            xappsPhpAssertSame(
+                'RO',
+                $catalogRequest['payload']['customerProfile']['country_code'] ?? null,
+                'catalog customer profile should be forwarded',
+            );
 
             $clientSelf = $client->getClientSelf();
             xappsPhpAssertSame('client_fixture_1', (string) ($clientSelf['client']['id'] ?? ''));

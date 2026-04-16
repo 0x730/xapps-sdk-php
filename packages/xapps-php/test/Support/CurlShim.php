@@ -710,6 +710,44 @@ final class TestCurlShim
                 'transaction' => null,
             ]);
         }
+        if ($method === 'POST' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/subscription-contracts/([^/]+)/cancel$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => null,
+                'subscription_contract' => [
+                    'id' => $matches[2],
+                    'status' => 'cancelled',
+                ],
+                'current_subscription' => [
+                    'id' => $matches[2],
+                    'status' => 'cancelled',
+                ],
+                'access_projection' => [
+                    'entitlement_state' => 'active',
+                ],
+                'transaction' => null,
+            ]);
+        }
+        if ($method === 'POST' && preg_match('#^/embed/my-xapps/([^/]+)/monetization/subscription-contracts/([^/]+)/refresh-state$#', $path, $matches) === 1) {
+            return self::json(200, [
+                'xapp_id' => $matches[1],
+                'version_id' => 'ver_' . $matches[1],
+                'payment_session' => null,
+                'subscription_contract' => [
+                    'id' => $matches[2],
+                    'status' => 'past_due',
+                ],
+                'current_subscription' => [
+                    'id' => $matches[2],
+                    'status' => 'past_due',
+                ],
+                'access_projection' => [
+                    'entitlement_state' => 'suspended',
+                ],
+                'transaction' => null,
+            ]);
+        }
         if ($method === 'POST' && $path === '/publisher/import-manifest') {
             $slug = trim((string) ($payload['slug'] ?? 'demo'));
             return self::json(200, [

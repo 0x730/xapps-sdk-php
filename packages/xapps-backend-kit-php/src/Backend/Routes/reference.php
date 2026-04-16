@@ -134,6 +134,7 @@ function xapps_backend_kit_reference_endpoint_groups(array $capabilities = [], a
                 ['method' => 'GET', 'path' => '/api/host-config', 'purpose' => 'Returns current host config such as gateway base URL and supported embed modes.'],
                 ['method' => 'POST', 'path' => '/api/resolve-subject', 'purpose' => 'Resolves a stable subject id from email for the stateless host bootstrap.'],
                 ['method' => 'POST', 'path' => '/api/create-catalog-session', 'purpose' => 'Proxies catalog session creation for the host page.'],
+                ['method' => 'POST', 'path' => '/api/catalog-customer-profile', 'purpose' => 'Resolves the default tenant billing profile used to prefill subject-bound catalog sessions.'],
                 ['method' => 'POST', 'path' => '/api/create-widget-session', 'purpose' => 'Proxies widget session creation for the host page.'],
             ],
         ],

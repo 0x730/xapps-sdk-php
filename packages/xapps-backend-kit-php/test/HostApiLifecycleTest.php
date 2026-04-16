@@ -18,6 +18,16 @@ return [
                     return ['ok' => true, 'input' => $input];
                 }
 
+                public function refreshMyXappSubscriptionContractState(array $input): array
+                {
+                    return ['ok' => true, 'input' => $input];
+                }
+
+                public function cancelMyXappSubscriptionContract(array $input): array
+                {
+                    return ['ok' => true, 'input' => $input];
+                }
+
                 public function runWidgetToolRequest(array $input): array
                 {
                     return ['ok' => true, 'input' => $input];
@@ -51,6 +61,8 @@ return [
                 '/api/widget-tool-request',
                 '/api/my-xapps/:xappId/monetization',
                 '/api/my-xapps/:xappId/monetization/history',
+                '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/refresh-state',
+                '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/cancel',
                 '/api/my-xapps/:xappId/monetization/purchase-intents/prepare',
                 '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session',
                 '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session/finalize',
@@ -89,6 +101,28 @@ return [
                                     ['id' => 'intent_123'],
                                 ],
                             ],
+                        ],
+                    ];
+                }
+
+                public function refreshMyXappSubscriptionContractState(array $input): array
+                {
+                    $this->calls[] = ['method' => 'refresh_subscription', 'input' => $input];
+                    return [
+                        'subscription_contract' => [
+                            'id' => $input['contractId'] ?? null,
+                            'status' => 'past_due',
+                        ],
+                    ];
+                }
+
+                public function cancelMyXappSubscriptionContract(array $input): array
+                {
+                    $this->calls[] = ['method' => 'cancel_subscription', 'input' => $input];
+                    return [
+                        'subscription_contract' => [
+                            'id' => $input['contractId'] ?? null,
+                            'status' => 'cancelled',
                         ],
                     ];
                 }
@@ -184,6 +218,42 @@ return [
                 ],
             ], $service->calls[1] ?? null, 'GET history should proxy expected payload');
 
+            $refreshRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/refresh-state');
+            $refreshResponse = xappsBackendKitPhpInvokeRoute($refreshRoute['handler'], [
+                'headers' => ['origin' => 'https://host.example.test'],
+                'params' => ['xappId' => 'xapp_123', 'contractId' => 'contract_123'],
+                'query' => ['token' => 'tok_123'],
+                'body' => [],
+            ]);
+            xappsBackendKitPhpAssertSame(200, $refreshResponse['status'], 'Refresh status should return 200');
+            xappsBackendKitPhpAssertSame('past_due', $refreshResponse['body']['subscription_contract']['status'] ?? null, 'Refresh status should return subscription');
+            xappsBackendKitPhpAssertSame([
+                'method' => 'refresh_subscription',
+                'input' => [
+                    'xappId' => 'xapp_123',
+                    'contractId' => 'contract_123',
+                    'token' => 'tok_123',
+                ],
+            ], $service->calls[2] ?? null, 'Refresh status should proxy expected payload');
+
+            $cancelRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/cancel');
+            $cancelResponse = xappsBackendKitPhpInvokeRoute($cancelRoute['handler'], [
+                'headers' => ['origin' => 'https://host.example.test'],
+                'params' => ['xappId' => 'xapp_123', 'contractId' => 'contract_123'],
+                'query' => ['token' => 'tok_123'],
+                'body' => [],
+            ]);
+            xappsBackendKitPhpAssertSame(200, $cancelResponse['status'], 'Cancel subscription should return 200');
+            xappsBackendKitPhpAssertSame('cancelled', $cancelResponse['body']['subscription_contract']['status'] ?? null, 'Cancel subscription should return subscription');
+            xappsBackendKitPhpAssertSame([
+                'method' => 'cancel_subscription',
+                'input' => [
+                    'xappId' => 'xapp_123',
+                    'contractId' => 'contract_123',
+                    'token' => 'tok_123',
+                ],
+            ], $service->calls[3] ?? null, 'Cancel subscription should proxy expected payload');
+
             $widgetToolRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/widget-tool-request');
             $widgetToolResponse = xappsBackendKitPhpInvokeRoute($widgetToolRoute['handler'], [
                 'headers' => ['origin' => 'https://host.example.test'],
@@ -204,7 +274,7 @@ return [
                     'toolName' => 'complete_subject_profile',
                     'payload' => ['source' => 'subject_self_profile'],
                 ],
-            ], $service->calls[2] ?? null, 'Widget tool route should proxy expected payload');
+            ], $service->calls[4] ?? null, 'Widget tool route should proxy expected payload');
 
             $prepareRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/my-xapps/:xappId/monetization/purchase-intents/prepare');
             $prepareResponse = xappsBackendKitPhpInvokeRoute($prepareRoute['handler'], [
@@ -234,7 +304,7 @@ return [
                     'locale' => 'ro',
                     'country' => 'RO',
                 ],
-            ], $service->calls[3] ?? null, 'Prepare should proxy expected payload');
+            ], $service->calls[5] ?? null, 'Prepare should proxy expected payload');
 
             $paymentRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session');
             $paymentResponse = xappsBackendKitPhpInvokeRoute($paymentRoute['handler'], [
@@ -273,7 +343,7 @@ return [
                     'paymentScheme' => 'stripe',
                     'metadata' => ['source' => 'test'],
                 ],
-            ], $service->calls[4] ?? null, 'Payment-session should proxy expected payload');
+            ], $service->calls[6] ?? null, 'Payment-session should proxy expected payload');
 
             $finalizeRoute = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/my-xapps/:xappId/monetization/purchase-intents/:intentId/payment-session/finalize');
             $finalizeResponse = xappsBackendKitPhpInvokeRoute($finalizeRoute['handler'], [
@@ -291,7 +361,7 @@ return [
                     'intentId' => 'intent_123',
                     'token' => 'tok_123',
                 ],
-            ], $service->calls[5] ?? null, 'Finalize should proxy expected payload');
+            ], $service->calls[7] ?? null, 'Finalize should proxy expected payload');
         },
     ],
     [
@@ -307,6 +377,16 @@ return [
                 public function getMyXappMonetizationHistory(array $input): array
                 {
                     return ['xapp_id' => $input['xappId'] ?? null];
+                }
+
+                public function refreshMyXappSubscriptionContractState(array $input): array
+                {
+                    return ['subscription_contract' => ['id' => $input['contractId'] ?? null]];
+                }
+
+                public function cancelMyXappSubscriptionContract(array $input): array
+                {
+                    return ['subscription_contract' => ['id' => $input['contractId'] ?? null]];
                 }
             };
 

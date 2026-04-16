@@ -60,7 +60,10 @@ final class BackendModules
             'registerReferenceRoutes' => $deps['registerReferenceRoutes'] ?? null,
         ]);
 
-        self::registerHostReferenceModuleRoutes($routes, $app, $hostOptions, [
+        self::registerHostReferenceModuleRoutes($routes, $app, array_merge(
+            $hostOptions,
+            ['subjectProfiles' => $app['subjectProfileOptions'] ?? []],
+        ), [
             'registerHostPageRoutes' => $deps['registerHostPageRoutes'] ?? null,
             'registerHostApiRoutes' => $deps['registerHostApiRoutes'] ?? null,
         ]);

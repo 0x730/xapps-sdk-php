@@ -117,6 +117,7 @@ final class BackendOptions
         $defaultGateway = BackendSupport::readRecord($defaults['gateway'] ?? null);
 
         $subjectResolver = $subjectProfiles['resolveCandidates'] ?? null;
+        $catalogCustomerProfileResolver = $subjectProfiles['resolveCatalogCustomerProfile'] ?? null;
         $policyResolver = $overrides['resolvePolicyRequest'] ?? null;
         $hostProxyService = $overrides['hostProxyService'] ?? null;
         $gatewayClient = $overrides['gatewayClient'] ?? null;
@@ -208,6 +209,9 @@ final class BackendOptions
                 'catalogJson' => BackendSupport::readString($subjectProfiles['catalogJson'] ?? null),
                 'defaultProfiles' => BackendSupport::readList($subjectProfiles['defaultProfiles'] ?? null),
                 'resolveCandidates' => is_callable($subjectResolver) ? $subjectResolver : null,
+                'resolveCatalogCustomerProfile' => is_callable($catalogCustomerProfileResolver)
+                    ? $catalogCustomerProfileResolver
+                    : null,
             ],
             'overrides' => [
                 'hostProxyService' => is_object($hostProxyService) ? $hostProxyService : null,

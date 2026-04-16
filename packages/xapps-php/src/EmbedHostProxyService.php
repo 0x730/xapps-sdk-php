@@ -189,6 +189,9 @@ final class EmbedHostProxyService
             'xappId' => $this->optionalString($input['xappId'] ?? null),
             'publishers' => is_array($input['publishers'] ?? null) ? $input['publishers'] : null,
             'tags' => is_array($input['tags'] ?? null) ? $input['tags'] : null,
+            'customerProfile' => is_array($input['customerProfile'] ?? null)
+                ? $input['customerProfile']
+                : null,
         ]);
     }
 
@@ -293,6 +296,26 @@ final class EmbedHostProxyService
         return $this->gatewayClient->finalizeEmbedMyXappPurchasePaymentSession([
             'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
             'intentId' => $this->requireTrimmedString($input['intentId'] ?? null, 'intentId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function refreshMyXappSubscriptionContractState(array $input): array
+    {
+        return $this->gatewayClient->refreshEmbedMyXappSubscriptionContractState([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'contractId' => $this->requireTrimmedString($input['contractId'] ?? $input['contract_id'] ?? null, 'contractId'),
+            'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
+        ]);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function cancelMyXappSubscriptionContract(array $input): array
+    {
+        return $this->gatewayClient->cancelEmbedMyXappSubscriptionContract([
+            'xappId' => $this->requireTrimmedString($input['xappId'] ?? null, 'xappId'),
+            'contractId' => $this->requireTrimmedString($input['contractId'] ?? $input['contract_id'] ?? null, 'contractId'),
             'token' => $this->requireTrimmedString($input['token'] ?? null, 'token'),
         ]);
     }

@@ -181,6 +181,58 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
 
     $routes[] = [
         'method' => 'POST',
+        'path' => '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/refresh-state',
+        'handler' => static function (array $request) use ($app, $allowedOrigins): void {
+            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+                return;
+            }
+            try {
+                $body = xapps_backend_kit_read_record($request['body']);
+                $query = xapps_backend_kit_read_record($request['query']);
+                $params = xapps_backend_kit_read_record($request['params']);
+                xapps_backend_kit_send_json(
+                    $app['hostProxyService']->refreshMyXappSubscriptionContractState([
+                        'xappId' => $params['xappId'] ?? null,
+                        'contractId' => $params['contractId'] ?? null,
+                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                    ]),
+                    200,
+                    xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
+                );
+            } catch (\Throwable $error) {
+                xapps_backend_kit_send_service_error($error, 'refresh my-xapp subscription contract state failed');
+            }
+        },
+    ];
+
+    $routes[] = [
+        'method' => 'POST',
+        'path' => '/api/my-xapps/:xappId/monetization/subscription-contracts/:contractId/cancel',
+        'handler' => static function (array $request) use ($app, $allowedOrigins): void {
+            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+                return;
+            }
+            try {
+                $body = xapps_backend_kit_read_record($request['body']);
+                $query = xapps_backend_kit_read_record($request['query']);
+                $params = xapps_backend_kit_read_record($request['params']);
+                xapps_backend_kit_send_json(
+                    $app['hostProxyService']->cancelMyXappSubscriptionContract([
+                        'xappId' => $params['xappId'] ?? null,
+                        'contractId' => $params['contractId'] ?? null,
+                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                    ]),
+                    200,
+                    xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
+                );
+            } catch (\Throwable $error) {
+                xapps_backend_kit_send_service_error($error, 'cancel my-xapp subscription failed');
+            }
+        },
+    ];
+
+    $routes[] = [
+        'method' => 'POST',
         'path' => '/api/my-xapps/:xappId/monetization/purchase-intents/prepare',
         'handler' => static function (array $request) use ($app, $allowedOrigins): void {
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {

@@ -10,6 +10,10 @@ composer require xapps-platform/xapps-backend-kit
 
 This package depends on `xapps-platform/xapps-php` and sits above it.
 
+For the current XMS system behavior and API/package reader path, read:
+
+- [docs/specifications/xms/README.md](/home/dacrise/x/xapps/docs/specifications/xms/README.md)
+
 Use it when you want a higher-level packaged backend contract with default routes, mode assembly, payment runtime composition, and override seams.
 
 Use `xapps-platform/xapps-php` directly only when you need lower-level PHP primitives that the backend kit intentionally does not own.
