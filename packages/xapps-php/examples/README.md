@@ -7,6 +7,7 @@ Use these examples by intent.
 Minimal server-side host proxy reference:
 
 - [host-proxy/minimal.php](/home/dacrise/x/xapps/packages/xapps-php/examples/host-proxy/minimal.php)
+- [host-proxy/hosted-integrator-bootstrap.php](/home/dacrise/x/xapps/packages/xapps-php/examples/host-proxy/hosted-integrator-bootstrap.php)
 
 Use this when you want:
 
@@ -14,6 +15,7 @@ Use this when you want:
 - subject resolution
 - catalog/widget session minting
 - a PHP reference to mirror the Node host proxy starter
+- the local `POST /api/host-bootstrap` bridge for hosted-integrator mode
 
 This maps to the `minimal embed` backend profile:
 
@@ -38,4 +40,6 @@ Payment-lane examples:
 - [payment-return/parity.php](/home/dacrise/x/xapps/packages/xapps-php/examples/payment-return/parity.php)
 - [payment-return/xpo-core-fixtures.php](/home/dacrise/x/xapps/packages/xapps-php/examples/payment-return/xpo-core-fixtures.php)
 
-Use the PHP host proxy starter as the backend pair for the browser starter in `packages/xapps-embed-sdk/examples/marketplace-host-starter`.
+Use the PHP host proxy starter as the backend pair for:
+
+- [packages/browser-host/examples/hosted-integrator-starter/README.md](/home/dacrise/x/xapps/packages/browser-host/examples/hosted-integrator-starter/README.md)

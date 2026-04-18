@@ -1,6 +1,6 @@
 # xapps-platform/xapps-php
 
-PHP helper SDK for tenant/publisher backend integrations.
+PHP backend SDK for tenant, publisher, and host-proxy integrations.
 
 ## Install
 
@@ -8,13 +8,25 @@ PHP helper SDK for tenant/publisher backend integrations.
 composer require xapps-platform/xapps-php
 ```
 
-Use `xapps-platform/xapps-php` when you want lower-level PHP primitives for gateway, callback, payment-return, or publisher-admin flows.
+Use `xapps-platform/xapps-php` when you want lower-level PHP primitives for gateway, callback, payment-return, publisher-admin, or host-proxy flows.
 
 If you want a higher-level packaged backend contract with default routes and mode assembly, use `xapps-platform/xapps-backend-kit` instead.
 
 For the current XMS system behavior and API reader path, read:
 
 - [docs/specifications/xms/README.md](/home/dacrise/x/xapps/docs/specifications/xms/README.md)
+
+## Browser + backend SDK split
+
+For the full embed contract:
+
+- browser SDK: `@xapps-platform/browser-host`
+- low-level browser engine: `@xapps-platform/embed-sdk`
+- PHP backend SDK: `xapps-platform/xapps-php`
+
+Use this package when the browser already runs `@xapps-platform/browser-host`
+or `@xapps-platform/embed-sdk` and the backend needs to proxy the host/session
+contract to the gateway or tenant backend.
 
 ## Scope (MVP)
 
