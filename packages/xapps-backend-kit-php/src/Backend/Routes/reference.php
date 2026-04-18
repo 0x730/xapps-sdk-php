@@ -74,10 +74,10 @@ function xapps_backend_kit_reference_assets_group(array $reference): array
             ['method' => 'GET', 'path' => '/embed/sdk/xapps-embed-sdk.esm.js', 'purpose' => 'Serves the embed SDK bundle used by the local reference host surfaces.'],
             ['method' => 'GET', 'path' => '/host/marketplace-host.js', 'purpose' => 'Browser bootstrap for the marketplace host reference.'],
             ['method' => 'GET', 'path' => '/host/single-xapp-host.js', 'purpose' => 'Browser bootstrap for the single-xapp host reference.'],
-            ['method' => 'GET', 'path' => '/host/host-shell.js', 'purpose' => 'Shared host-shell rendering helpers for marketplace and single-xapp surfaces.'],
+            ['method' => 'GET', 'path' => '/host/host-shell.js', 'purpose' => 'Repo reference host-shell helpers for marketplace and single-xapp surfaces.'],
             ['method' => 'GET', 'path' => '/host/marketplace-runtime.js', 'purpose' => 'Shared marketplace runtime wiring over the browser SDK contract.'],
-            ['method' => 'GET', 'path' => '/host/reference-runtime.js', 'purpose' => 'Reference theme/runtime helpers for the standard marketplace host flow.'],
-            ['method' => 'GET', 'path' => '/host/host-status.js', 'purpose' => 'Shared host proof/status renderer used by tenant host surfaces.'],
+            ['method' => 'GET', 'path' => '/host/reference-runtime.js', 'purpose' => 'Repo reference theme/runtime helpers for the standard marketplace host flow.'],
+            ['method' => 'GET', 'path' => '/host/host-status.js', 'purpose' => 'Repo reference host proof/status renderer used by tenant host surfaces.'],
         ];
     }
 
