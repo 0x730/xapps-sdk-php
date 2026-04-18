@@ -7,7 +7,7 @@
   "homepage": "https://gateway.0x730.com",
   "require": {
     "php": "^8.2",
-    "xapps-platform/xapps-php": "^0.2.8"
+    "xapps-platform/xapps-php": "^0.2.9"
   },
   "autoload": {
     "psr-4": {
