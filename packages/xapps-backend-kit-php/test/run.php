@@ -7,6 +7,7 @@ require_once __DIR__ . '/bootstrap.php';
 $files = [
     __DIR__ . '/HostProxyTest.php',
     __DIR__ . '/HostApiLifecycleTest.php',
+    __DIR__ . '/HostBootstrapSecurityTest.php',
 ];
 
 $passed = 0;

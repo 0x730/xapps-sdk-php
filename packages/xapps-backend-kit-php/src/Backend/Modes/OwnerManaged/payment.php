@@ -40,9 +40,9 @@ function xapps_backend_kit_owner_managed_payment_reference_details(): array
             'tenant_session_reference' => 'tenant page proxies gateway session through /api/tenant-payment/*',
         ],
         'required_settings' => [
-            'XCONECTB_GUARD_INGEST_API_KEY',
-            'XCONECTB_TENANT_PAYMENT_URL',
-            'XCONECTB_TENANT_PAYMENT_RETURN_SECRET or XCONECTB_TENANT_PAYMENT_RETURN_SECRET_REF',
+            'GUARD_INGEST_API_KEY',
+            'TENANT_PAYMENT_URL',
+            'TENANT_PAYMENT_RETURN_SECRET or TENANT_PAYMENT_RETURN_SECRET_REF',
         ],
         'payment_responsibilities' => [
             'serve the tenant payment page',

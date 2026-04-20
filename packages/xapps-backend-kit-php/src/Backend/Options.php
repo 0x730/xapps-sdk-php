@@ -6,6 +6,34 @@ namespace Xapps\BackendKit;
 
 final class BackendOptions
 {
+    private static function readFirstNonEmptyString(mixed ...$values): string
+    {
+        foreach ($values as $value) {
+            $normalized = trim(BackendSupport::readString($value));
+            if ($normalized !== '') {
+                return $normalized;
+            }
+        }
+        return '';
+    }
+
+    private static function resolveSessionAbsoluteTtlSeconds(array $sessionInput): int
+    {
+        $rawTtl = $sessionInput['absoluteTtlSeconds'] ?? null;
+        return (float) $rawTtl > 0 ? (int) $rawTtl : 1800;
+    }
+
+    private static function pickCallable(mixed ...$values): mixed
+    {
+        foreach ($values as $value) {
+            if (is_callable($value)) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     public static function applyGatewayOverrides(array $config, array $gateway = []): array
     {
         $baseUrl = BackendSupport::readString($gateway['baseUrl'] ?? null);
@@ -94,27 +122,116 @@ final class BackendOptions
         return array_values(array_filter($entries, static fn (string $entry): bool => $entry !== ''));
     }
 
+    public static function normalizeSigningVerifierKeys(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $normalized = [];
+        foreach ($value as $key => $raw) {
+            $normalizedKey = trim((string) $key);
+            $normalizedValue = trim(BackendSupport::readString($raw));
+            if ($normalizedKey === '' || $normalizedValue === '') {
+                continue;
+            }
+            $normalized[$normalizedKey] = $normalizedValue;
+        }
+        return $normalized;
+    }
+
+    public static function normalizeCookieSameSite(
+        mixed $value,
+        string $fallback = 'auto',
+    ): string {
+        $normalized = strtolower(trim(BackendSupport::readString($value, $fallback)));
+        return match ($normalized) {
+            'lax' => 'Lax',
+            'strict' => 'Strict',
+            'none' => 'None',
+            default => 'auto',
+        };
+    }
+
+    public static function normalizeCookieSecure(
+        mixed $value,
+        string|bool $fallback = 'auto',
+    ): string|bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+        $normalized = strtolower(trim(BackendSupport::readString($value, (string) $fallback)));
+        return match ($normalized) {
+            'true' => true,
+            'false' => false,
+            default => 'auto',
+        };
+    }
+
+    private static function validateHostedSecurityOptions(array $host): void
+    {
+        $bootstrap = BackendSupport::readRecord($host['bootstrap'] ?? null);
+        $session = BackendSupport::readRecord($host['session'] ?? null);
+        $apiKeys = self::normalizeApiKeys($bootstrap['apiKeys'] ?? null);
+        $signingSecret = trim(BackendSupport::readString($bootstrap['signingSecret'] ?? null));
+        if ($apiKeys !== [] && $signingSecret === '') {
+            throw new \InvalidArgumentException(
+                'host.bootstrap.signingSecret is required when host.bootstrap.apiKeys is configured'
+            );
+        }
+        $sessionSigningSecret = trim(BackendSupport::readString($session['signingSecret'] ?? null));
+        if ($apiKeys !== [] && $sessionSigningSecret === '') {
+            throw new \InvalidArgumentException(
+                'host.session.signingSecret is required when host.bootstrap.apiKeys is configured'
+            );
+        }
+        $sessionStore = BackendSupport::readRecord($session['store'] ?? null);
+        if ($apiKeys !== [] && !is_callable($sessionStore['isRevoked'] ?? null)) {
+            throw new \InvalidArgumentException(
+                'host.session.store.isRevoked is required when host.bootstrap.apiKeys is configured'
+            );
+        }
+        if ($apiKeys !== [] && !is_callable($sessionStore['revoke'] ?? null)) {
+            throw new \InvalidArgumentException(
+                'host.session.store.revoke is required when host.bootstrap.apiKeys is configured'
+            );
+        }
+        $idleTtlSeconds = (int) (
+            (float) ($session['idleTtlSeconds'] ?? 0) > 0
+                ? ($session['idleTtlSeconds'] ?? 0)
+                : 0
+        );
+        if ($apiKeys !== [] && $idleTtlSeconds > 0 && !is_callable($sessionStore['activate'] ?? null)) {
+            throw new \InvalidArgumentException(
+                'host.session.store.activate is required when host.session.idleTtlSeconds is configured'
+            );
+        }
+        if ($apiKeys !== [] && $idleTtlSeconds > 0 && !is_callable($sessionStore['touch'] ?? null)) {
+            throw new \InvalidArgumentException(
+                'host.session.store.touch is required when host.session.idleTtlSeconds is configured'
+            );
+        }
+    }
+
     public static function normalizeOptions(array $options = [], array $deps = []): array
     {
-        $defaults = BackendSupport::readRecord($deps['defaults'] ?? null);
         $normalizeEnabledModes = $deps['normalizeEnabledModes'] ?? null;
         if (!is_callable($normalizeEnabledModes)) {
             throw new \InvalidArgumentException('normalizeEnabledModes is required');
         }
 
         $host = BackendSupport::readRecord($options['host'] ?? null);
+        $bootstrap = BackendSupport::readRecord($host['bootstrap'] ?? null);
+        $session = BackendSupport::readRecord($host['session'] ?? null);
+        $store = BackendSupport::readRecord($session['store'] ?? null);
         $payments = BackendSupport::readRecord($options['payments'] ?? null);
+        $gateway = BackendSupport::readRecord($options['gateway'] ?? null);
         $assets = BackendSupport::readRecord($options['assets'] ?? null);
         $seedLogo = BackendSupport::readRecord($assets['seedLogo'] ?? null);
         $paymentPage = BackendSupport::readRecord($assets['paymentPage'] ?? null);
-        $gateway = BackendSupport::readRecord($options['gateway'] ?? null);
         $branding = BackendSupport::readRecord($options['branding'] ?? null);
         $reference = BackendSupport::readRecord($options['reference'] ?? null);
         $subjectProfiles = BackendSupport::readRecord($options['subjectProfiles'] ?? null);
         $overrides = BackendSupport::readRecord($options['overrides'] ?? null);
-        $defaultHost = BackendSupport::readRecord($defaults['host'] ?? null);
-        $defaultPayments = BackendSupport::readRecord($defaults['payments'] ?? null);
-        $defaultGateway = BackendSupport::readRecord($defaults['gateway'] ?? null);
 
         $subjectResolver = $subjectProfiles['resolveCandidates'] ?? null;
         $catalogCustomerProfileResolver = $subjectProfiles['resolveCatalogCustomerProfile'] ?? null;
@@ -122,54 +239,84 @@ final class BackendOptions
         $hostProxyService = $overrides['hostProxyService'] ?? null;
         $gatewayClient = $overrides['gatewayClient'] ?? null;
         $paymentHandler = $overrides['paymentHandler'] ?? null;
+        $sessionAbsoluteTtlSeconds = self::resolveSessionAbsoluteTtlSeconds($session);
 
-        return [
+        $normalized = [
             'host' => [
-                'enableReference' => ($host['enableReference'] ?? true) !== false
-                    && ($defaultHost['enableReference'] ?? true) !== false,
-                'enableLifecycle' => ($host['enableLifecycle'] ?? true) !== false
-                    && ($defaultHost['enableLifecycle'] ?? true) !== false,
-                'enableBridge' => ($host['enableBridge'] ?? true) !== false
-                    && ($defaultHost['enableBridge'] ?? true) !== false,
-                'allowedOrigins' => self::normalizeAllowedOrigins($host['allowedOrigins'] ?? ($defaultHost['allowedOrigins'] ?? null)),
+                'enableReference' => ($host['enableReference'] ?? true) !== false,
+                'enableLifecycle' => ($host['enableLifecycle'] ?? true) !== false,
+                'enableBridge' => ($host['enableBridge'] ?? true) !== false,
+                'allowedOrigins' => self::normalizeAllowedOrigins($host['allowedOrigins'] ?? null),
                 'bootstrap' => [
-                    'apiKeys' => self::normalizeApiKeys(
-                        BackendSupport::readRecord($host['bootstrap'] ?? null)['apiKeys'] ?? ($defaultHost['bootstrap']['apiKeys'] ?? null),
-                    ),
-                    'signingSecret' => trim(
-                        BackendSupport::readString(
-                            BackendSupport::readRecord($host['bootstrap'] ?? null)['signingSecret'] ?? null,
-                            BackendSupport::readString($defaultHost['bootstrap']['signingSecret'] ?? null),
-                        ),
-                    ),
+                    'apiKeys' => self::normalizeApiKeys($bootstrap['apiKeys'] ?? null),
+                    'signingSecret' => trim(BackendSupport::readString($bootstrap['signingSecret'] ?? null)),
+                    'signingKeyId' => trim(BackendSupport::readString($bootstrap['signingKeyId'] ?? null)),
+                    'verifierKeys' => self::normalizeSigningVerifierKeys($bootstrap['verifierKeys'] ?? null),
                     'ttlSeconds' => (int) (
-                        (float) (
-                            BackendSupport::readRecord($host['bootstrap'] ?? null)['ttlSeconds']
-                            ?? ($defaultHost['bootstrap']['ttlSeconds'] ?? 300)
-                        ) > 0
-                            ? BackendSupport::readRecord($host['bootstrap'] ?? null)['ttlSeconds']
-                                ?? ($defaultHost['bootstrap']['ttlSeconds'] ?? 300)
+                        (float) (($bootstrap['ttlSeconds'] ?? null) ?? 300) > 0
+                            ? (($bootstrap['ttlSeconds'] ?? null) ?? 300)
                             : 300
+                    ),
+                    'consumeJti' => self::pickCallable(
+                        $bootstrap['consumeJti'] ?? null,
+                    ),
+                ],
+                'session' => [
+                    'signingSecret' => trim(BackendSupport::readString($session['signingSecret'] ?? null)),
+                    'signingKeyId' => trim(BackendSupport::readString($session['signingKeyId'] ?? null)),
+                    'verifierKeys' => self::normalizeSigningVerifierKeys($session['verifierKeys'] ?? null),
+                    'cookieName' => trim(BackendSupport::readString($session['cookieName'] ?? null, 'xapps_host_session')) ?: 'xapps_host_session',
+                    'absoluteTtlSeconds' => $sessionAbsoluteTtlSeconds,
+                    'idleTtlSeconds' => (int) (
+                        (float) (($session['idleTtlSeconds'] ?? null) ?? 0) > 0
+                            ? (($session['idleTtlSeconds'] ?? null) ?? 0)
+                            : 0
+                    ),
+                    'cookiePath' => trim(BackendSupport::readString($session['cookiePath'] ?? null, '/')) ?: '/',
+                    'cookieDomain' => trim(BackendSupport::readString($session['cookieDomain'] ?? null)),
+                    'cookieSameSite' => self::normalizeCookieSameSite(
+                        $session['cookieSameSite'] ?? null,
+                        'auto',
+                    ),
+                    'cookieSecure' => self::normalizeCookieSecure(
+                        $session['cookieSecure'] ?? null,
+                        'auto',
+                    ),
+                    'store' => [
+                        'activate' => self::pickCallable(
+                            $store['activate'] ?? null,
+                        ),
+                        'touch' => self::pickCallable(
+                            $store['touch'] ?? null,
+                        ),
+                        'isRevoked' => self::pickCallable(
+                            $store['isRevoked'] ?? null,
+                        ),
+                        'revoke' => self::pickCallable(
+                            $store['revoke'] ?? null,
+                        ),
+                    ],
+                    'resolveSameOriginSubjectId' => self::pickCallable(
+                        $session['resolveSameOriginSubjectId'] ?? null,
+                    ),
+                    'rateLimitExchange' => self::pickCallable(
+                        $session['rateLimitExchange'] ?? null,
+                    ),
+                    'auditExchange' => self::pickCallable(
+                        $session['auditExchange'] ?? null,
                     ),
                 ],
             ],
             'payments' => [
                 'enabledModes' => $normalizeEnabledModes($payments['enabledModes'] ?? null),
-                'ownerIssuer' => self::normalizeOwnerIssuer(
-                    $payments['ownerIssuer'] ?? null,
-                    self::normalizeOwnerIssuer($defaultPayments['ownerIssuer'] ?? null),
+                'ownerIssuer' => self::normalizeOwnerIssuer($payments['ownerIssuer'] ?? null),
+                'paymentUrl' => self::readFirstNonEmptyString(
+                    $payments['paymentUrl'] ?? null,
+                    $payments['tenantPaymentUrl'] ?? null,
                 ),
-                'paymentUrl' => BackendSupport::readString($payments['paymentUrl'] ?? null, BackendSupport::readString($payments['tenantPaymentUrl'] ?? null))
-                    ?: BackendSupport::readString($defaultPayments['paymentUrl'] ?? null),
-                'returnSecret' => array_key_exists('returnSecret', $payments)
-                    ? BackendSupport::readString($payments['returnSecret'] ?? null)
-                    : BackendSupport::readString($defaultPayments['returnSecret'] ?? null),
-                'returnSecretRef' => array_key_exists('returnSecretRef', $payments)
-                    ? BackendSupport::readString($payments['returnSecretRef'] ?? null)
-                    : BackendSupport::readString($defaultPayments['returnSecretRef'] ?? null),
-                'returnUrlAllowlist' => array_key_exists('returnUrlAllowlist', $payments)
-                    ? BackendSupport::readString($payments['returnUrlAllowlist'] ?? null)
-                    : BackendSupport::readString($defaultPayments['returnUrlAllowlist'] ?? null),
+                'returnSecret' => BackendSupport::readString($payments['returnSecret'] ?? null),
+                'returnSecretRef' => BackendSupport::readString($payments['returnSecretRef'] ?? null),
+                'returnUrlAllowlist' => BackendSupport::readString($payments['returnUrlAllowlist'] ?? null),
             ],
             'assets' => [
                 'seedLogo' => [
@@ -182,8 +329,8 @@ final class BackendOptions
                 ],
             ],
             'gateway' => [
-                'baseUrl' => BackendSupport::readString($gateway['baseUrl'] ?? null) ?: BackendSupport::readString($defaultGateway['baseUrl'] ?? null),
-                'apiKey' => BackendSupport::readString($gateway['apiKey'] ?? null) ?: BackendSupport::readString($defaultGateway['apiKey'] ?? null),
+                'baseUrl' => trim(BackendSupport::readString($gateway['baseUrl'] ?? null)),
+                'apiKey' => trim(BackendSupport::readString($gateway['apiKey'] ?? null)),
             ],
             'branding' => [
                 'tenantName' => BackendSupport::readString($branding['tenantName'] ?? null),
@@ -220,6 +367,8 @@ final class BackendOptions
                 'resolvePolicyRequest' => is_callable($policyResolver) ? $policyResolver : null,
             ],
         ];
+        self::validateHostedSecurityOptions($normalized['host']);
+        return $normalized;
     }
 
     public static function attachBackendOptions(array $app, array $normalizedOptions): array

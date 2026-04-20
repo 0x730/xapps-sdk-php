@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/src/functions.php';
+require_once dirname(__DIR__, 2) . '/xapps-php/src/index.php';
 
 function xappsBackendKitPhpAssertTrue(bool $condition, string $message = 'Assertion failed'): void
 {

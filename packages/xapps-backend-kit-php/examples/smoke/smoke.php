@@ -38,6 +38,14 @@ $normalized = BackendKit::normalizeOptions([
             'signingSecret' => 'bootstrap_secret',
             'ttlSeconds' => 300,
         ],
+        'session' => [
+            'signingSecret' => 'session_secret',
+            'store' => [
+                'isRevoked' => static fn (): bool => false,
+                'revoke' => static function (): void {
+                },
+            ],
+        ],
     ],
     'payments' => [
         'enabledModes' => ['gateway_managed', 'owner_managed'],
@@ -55,17 +63,6 @@ $normalized = BackendKit::normalizeOptions([
         ],
     ],
 ], [
-    'defaults' => [
-        'host' => [
-            'enableReference' => true,
-            'enableLifecycle' => true,
-            'enableBridge' => true,
-        ],
-        'payments' => [
-            'ownerIssuer' => 'tenant',
-        ],
-        'gateway' => [],
-    ],
     'normalizeEnabledModes' => static fn (mixed $value): array => is_array($value) ? $value : [],
 ]);
 

@@ -9,7 +9,7 @@ function xapps_backend_kit_register_guard_routes(array &$routes, array $app, arr
         'path' => '/xapps/requests',
         'handler' => static function (array $request) use ($app, $options): void {
             $headers = $request['headers'];
-            $key = trim((string) ($headers['x-api-key'] ?? $headers['x-xconect-guard-api-key'] ?? ''));
+            $key = trim((string) ($headers['x-api-key'] ?? ''));
             if ($key === '' || $key !== (string) $app['config']['guardIngestApiKey']) {
                 xapps_backend_kit_send_json([
                     'status' => 'error',

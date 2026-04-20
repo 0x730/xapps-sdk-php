@@ -28,9 +28,9 @@ function xapps_backend_kit_tenant_delegated_payment_reference_details(): array
             'tenant_session_reference' => 'gateway-hosted delegated session only',
         ],
         'required_settings' => [
-            'XCONECTB_GUARD_INGEST_API_KEY',
+            'GUARD_INGEST_API_KEY',
             'delegated payment credential refs in the manifest/guard config',
-            'XCONECTB_TENANT_PAYMENT_RETURN_SECRET or XCONECTB_TENANT_PAYMENT_RETURN_SECRET_REF',
+            'TENANT_PAYMENT_RETURN_SECRET or TENANT_PAYMENT_RETURN_SECRET_REF',
         ],
         'payment_responsibilities' => [
             'keep tenant-delegated payment lane configured',

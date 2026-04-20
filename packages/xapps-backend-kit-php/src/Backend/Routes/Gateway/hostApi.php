@@ -6,8 +6,11 @@ function xapps_backend_kit_register_host_api_routes(array &$routes, array $app, 
 {
     $allowedOrigins = xapps_backend_kit_read_list($options['allowedOrigins'] ?? []);
     $bootstrap = xapps_backend_kit_read_record($options['bootstrap'] ?? []);
+    $session = xapps_backend_kit_read_record($options['session'] ?? []);
     $preflightPaths = [
         '/api/host-config',
+        '/api/host-session/exchange',
+        '/api/host-session/logout',
         '/api/resolve-subject',
         '/api/create-catalog-session',
         '/api/catalog-customer-profile',
@@ -47,11 +50,11 @@ function xapps_backend_kit_register_host_api_routes(array &$routes, array $app, 
         ];
     }
 
-    xapps_backend_kit_register_host_api_core($routes, $app, $allowedOrigins, $bootstrap);
+    xapps_backend_kit_register_host_api_core($routes, $app, $allowedOrigins, $bootstrap, $session);
     if (($options['enableLifecycle'] ?? true) !== false) {
-        xapps_backend_kit_register_host_api_lifecycle($routes, $app, $allowedOrigins, $bootstrap);
+        xapps_backend_kit_register_host_api_lifecycle($routes, $app, $allowedOrigins, $bootstrap, $session);
     }
     if (($options['enableBridge'] ?? true) !== false) {
-        xapps_backend_kit_register_host_api_bridge($routes, $app, $allowedOrigins, $bootstrap);
+        xapps_backend_kit_register_host_api_bridge($routes, $app, $allowedOrigins, $bootstrap, $session);
     }
 }

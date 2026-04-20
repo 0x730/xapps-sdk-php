@@ -415,8 +415,8 @@ final class BackendXms
     private static function readDelegatedReturnSecret(string $issuerMode, array $env): array
     {
         if ($issuerMode === 'tenant_delegated') {
-            $secretRef = trim((string) ($env['TENANT_DELEGATED_PAYMENT_RETURN_SECRET_REF'] ?? $env['XCONECT_TENANT_PAYMENT_RETURN_SECRET_REF'] ?? $env['TENANT_PAYMENT_RETURN_SECRET_REF'] ?? ''));
-            $secret = trim((string) ($env['TENANT_DELEGATED_PAYMENT_RETURN_SECRET'] ?? $env['XCONECT_TENANT_PAYMENT_RETURN_SECRET'] ?? $env['TENANT_PAYMENT_RETURN_SECRET'] ?? ''));
+            $secretRef = trim((string) ($env['TENANT_DELEGATED_PAYMENT_RETURN_SECRET_REF'] ?? $env['TENANT_PAYMENT_RETURN_SECRET_REF'] ?? ''));
+            $secret = trim((string) ($env['TENANT_DELEGATED_PAYMENT_RETURN_SECRET'] ?? $env['TENANT_PAYMENT_RETURN_SECRET'] ?? ''));
             return array_filter([
                 'secret_ref' => $secretRef !== '' ? $secretRef : null,
                 'secret' => $secret !== '' ? $secret : null,

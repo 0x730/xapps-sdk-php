@@ -10,6 +10,7 @@ use Xapps\HostedGatewayPaymentSession;
 use Xapps\PaymentHandler;
 
 require_once __DIR__ . '/Backend/Support.php';
+require_once __DIR__ . '/Backend/FileHostStore.php';
 require_once __DIR__ . '/Backend/Options.php';
 require_once __DIR__ . '/Backend/Runtime.php';
 require_once __DIR__ . '/Backend/Modules.php';
@@ -63,6 +64,16 @@ final class BackendKit
     public static function normalizeOptions(array $options = [], array $deps = []): array
     {
         return BackendOptions::normalizeOptions($options, $deps);
+    }
+
+    public static function createFileHostBootstrapReplayConsumer(array $config = []): callable
+    {
+        return BackendFileHostStore::createFileHostBootstrapReplayConsumer($config);
+    }
+
+    public static function createFileHostSessionStore(array $config = []): array
+    {
+        return BackendFileHostStore::createFileHostSessionStore($config);
     }
 
     public static function bootstrap(array $config, array $options = [], array $deps = []): array

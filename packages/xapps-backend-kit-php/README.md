@@ -235,7 +235,97 @@ as the Node variant:
 - `host.allowedOrigins`
 - `host.bootstrap.apiKeys`
 - `host.bootstrap.signingSecret`
+- optional `host.bootstrap.signingKeyId`
+- optional `host.bootstrap.verifierKeys`
 - optional `host.bootstrap.ttlSeconds`
+
+For the stronger host-session exchange posture, also configure:
+
+- `host.session.signingSecret`
+- optional `host.session.signingKeyId`
+- optional `host.session.verifierKeys`
+- `host.session.absoluteTtlSeconds`
+- optional `host.session.idleTtlSeconds`
+- `host.session.cookiePath`
+- optional `host.session.cookieDomain`
+- `host.session.cookieSameSite`
+- `host.session.cookieSecure`
+- required when `host.session.idleTtlSeconds > 0`: `host.session.store.activate`
+- required when `host.session.idleTtlSeconds > 0`: `host.session.store.touch`
+- required `host.session.store.isRevoked`
+- required `host.session.store.revoke`
+
+Minimal preferred session-store shape:
+
+```php
+'host' => [
+    'bootstrap' => [
+        'apiKeys' => ['bootstrap_key_123'],
+        'signingSecret' => 'bootstrap_secret_123',
+    ],
+    'session' => [
+        'signingSecret' => 'session_secret_123',
+        'absoluteTtlSeconds' => 1800,
+        'idleTtlSeconds' => 900,
+        'store' => [
+            'activate' => static fn (array $input): bool => true,
+            'touch' => static fn (array $input): array => ['active' => true],
+            'isRevoked' => static fn (array $input): bool => false,
+            'revoke' => static fn (array $input): bool => true,
+        ],
+    ],
+],
+```
+
+Generic file-backed helpers are also available when you want backend-owned
+state without reimplementing the file locking and JSON persistence:
+
+```php
+$consumeJti = BackendKit::createFileHostBootstrapReplayConsumer([
+    'replayFile' => sys_get_temp_dir() . '/xapps-host-bootstrap-replay.json',
+]);
+
+$store = BackendKit::createFileHostSessionStore([
+    'stateFile' => sys_get_temp_dir() . '/xapps-host-session-state.json',
+    'revocationsFile' => sys_get_temp_dir() . '/xapps-host-session-revocations.json',
+]);
+```
+
+Important rule:
+
+- `absoluteTtlSeconds` is the real cookie/session lifetime baseline
+- `host.session.signingSecret` should be distinct from `host.bootstrap.signingSecret`
+- `signingKeyId` + `verifierKeys` enable additive key rotation; the current
+  `signingSecret` remains the active signer, and `verifierKeys` can carry older
+  verification keys by `kid`
+- `idleTtlSeconds` is only meaningful when both `host.session.store.activate`
+  and `host.session.store.touch` are configured against backend-owned session state
+
+Host auth classes:
+
+1. browser bootstrap entry
+   - `POST /api/browser/host-bootstrap`
+   - browser-safe local renewal/bootstrap route
+2. tenant bootstrap operation
+   - `POST /api/host-bootstrap`
+   - server-side `X-API-Key`
+3. host control-plane
+   - host session cookie
+   - catalog/session/lifecycle/advanced bridge routes
+4. token-scoped execution-plane
+   - gateway-issued widget/access token
+   - widget tool execution and current-user monetization routes
+
+Execution-plane rule:
+
+- prefer `Authorization: Bearer <token>` on host execution-plane routes
+- query/body token input should be treated as compatibility input, not the
+  preferred contract
+
+This split is intentional. The PHP backend kit should not turn the tenant
+backend into a generic gateway proxy. Host session protects the hosted
+control-plane. Scoped widget/access tokens protect execution-plane flows that
+already run on gateway-issued runtime tokens.
 
 The tenant backend resolves subject through the gateway/host proxy and signs
 the short-lived browser bootstrap token locally. Raw platform API keys stay on
@@ -255,7 +345,10 @@ surface, including:
 
 Hosted-integrator session expectations are the same as in the Node backend kit:
 
-- browser hosts use a short-lived `bootstrapToken`
+- browser hosts use a short-lived `bootstrapToken` only for
+  `POST /api/host-session/exchange`
+- backend kit mints the host session cookie
+- ongoing hosted API calls use the host session cookie
 - widget sessions renew through `/api/bridge/token-refresh`
 - bootstrap renewal should re-run bootstrap instead of treating `subjectId` alone as durable proof
 - terminal widget-session failure should surface at the host shell layer, not as a raw iframe error
@@ -301,8 +394,8 @@ Recommended override order:
 3. injected services or resolver hooks
 4. explicit route or mode overrides
 
-Do not wire individual package route files directly in the app just to recreate
-the package defaults locally.
+Do not wire individual package route files directly in the app just to
+recreate the packaged backend surface locally.
 
 ## When To Drop Lower
 

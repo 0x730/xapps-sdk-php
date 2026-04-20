@@ -5,7 +5,13 @@ declare(strict_types=1);
 function xapps_backend_kit_apply_headers(array $headers): void
 {
     foreach ($headers as $key => $value) {
-        header($key . ': ' . $value);
+        if (is_array($value)) {
+            foreach ($value as $entry) {
+                header($key . ': ' . $entry, strtolower((string) $key) !== 'set-cookie');
+            }
+            continue;
+        }
+        header($key . ': ' . $value, strtolower((string) $key) !== 'set-cookie');
     }
 }
 

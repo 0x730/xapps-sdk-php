@@ -2,21 +2,27 @@
 
 declare(strict_types=1);
 
-function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $app, array $allowedOrigins = [], array $bootstrap = []): void
+function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $app, array $allowedOrigins = [], array $bootstrap = [], array $session = []): void
 {
     $routes[] = [
         'method' => 'GET',
         'path' => '/api/installations',
-        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap): void {
+        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
             try {
                 $query = xapps_backend_kit_read_record($request['query']);
-                $bootstrapContext = xapps_backend_kit_read_host_bootstrap_context($request, $bootstrap);
+                $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
+                $subjectId = xapps_backend_kit_resolve_trusted_host_subject_id(
+                    $request,
+                    $bootstrapContext,
+                    $query['subjectId'] ?? null,
+                    $session,
+                );
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->listInstallations([
-                        'subjectId' => $bootstrapContext['subjectId'] ?? ($query['subjectId'] ?? null),
+                        'subjectId' => $subjectId,
                     ]),
                     200,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
@@ -30,17 +36,23 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
     $routes[] = [
         'method' => 'POST',
         'path' => '/api/install',
-        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap): void {
+        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
-                $bootstrapContext = xapps_backend_kit_read_host_bootstrap_context($request, $bootstrap);
+                $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
+                $subjectId = xapps_backend_kit_resolve_trusted_host_subject_id(
+                    $request,
+                    $bootstrapContext,
+                    $body['subjectId'] ?? null,
+                    $session,
+                );
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->installXapp([
                         'xappId' => $body['xappId'] ?? null,
-                        'subjectId' => $bootstrapContext['subjectId'] ?? ($body['subjectId'] ?? null),
+                        'subjectId' => $subjectId,
                         'termsAccepted' => $body['termsAccepted'] ?? null,
                     ]),
                     200,
@@ -55,17 +67,23 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
     $routes[] = [
         'method' => 'POST',
         'path' => '/api/update',
-        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap): void {
+        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
-                $bootstrapContext = xapps_backend_kit_read_host_bootstrap_context($request, $bootstrap);
+                $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
+                $subjectId = xapps_backend_kit_resolve_trusted_host_subject_id(
+                    $request,
+                    $bootstrapContext,
+                    $body['subjectId'] ?? null,
+                    $session,
+                );
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->updateInstallation([
                         'installationId' => $body['installationId'] ?? null,
-                        'subjectId' => $bootstrapContext['subjectId'] ?? ($body['subjectId'] ?? null),
+                        'subjectId' => $subjectId,
                         'termsAccepted' => $body['termsAccepted'] ?? null,
                     ]),
                     200,
@@ -80,17 +98,23 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
     $routes[] = [
         'method' => 'POST',
         'path' => '/api/uninstall',
-        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap): void {
+        'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
-                $bootstrapContext = xapps_backend_kit_read_host_bootstrap_context($request, $bootstrap);
+                $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
+                $subjectId = xapps_backend_kit_resolve_trusted_host_subject_id(
+                    $request,
+                    $bootstrapContext,
+                    $body['subjectId'] ?? null,
+                    $session,
+                );
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->uninstallInstallation([
                         'installationId' => $body['installationId'] ?? null,
-                        'subjectId' => $bootstrapContext['subjectId'] ?? ($body['subjectId'] ?? null),
+                        'subjectId' => $subjectId,
                     ]),
                     200,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
@@ -112,7 +136,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                 $body = xapps_backend_kit_read_record($request['body']);
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->runWidgetToolRequest([
-                        'token' => $body['token'] ?? null,
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $body['token'] ?? null),
                         'installationId' => $body['installationId'] ?? ($body['installation_id'] ?? null),
                         'toolName' => $body['toolName'] ?? ($body['tool_name'] ?? null),
                         'payload' => is_array($body['payload'] ?? null) ? $body['payload'] : [],
@@ -139,7 +163,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->getMyXappMonetization([
                         'xappId' => $params['xappId'] ?? null,
-                        'token' => $query['token'] ?? null,
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null),
                         'installationId' => $query['installationId'] ?? null,
                         'locale' => $query['locale'] ?? null,
                         'country' => $query['country'] ?? null,
@@ -167,7 +191,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->getMyXappMonetizationHistory([
                         'xappId' => $params['xappId'] ?? null,
-                        'token' => $query['token'] ?? null,
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null),
                         'limit' => $query['limit'] ?? null,
                     ]),
                     200,
@@ -194,7 +218,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                     $app['hostProxyService']->refreshMyXappSubscriptionContractState([
                         'xappId' => $params['xappId'] ?? null,
                         'contractId' => $params['contractId'] ?? null,
-                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null, $body['token'] ?? null),
                     ]),
                     200,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
@@ -220,7 +244,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                     $app['hostProxyService']->cancelMyXappSubscriptionContract([
                         'xappId' => $params['xappId'] ?? null,
                         'contractId' => $params['contractId'] ?? null,
-                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null, $body['token'] ?? null),
                     ]),
                     200,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
@@ -245,7 +269,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->prepareMyXappPurchaseIntent([
                         'xappId' => $params['xappId'] ?? null,
-                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null, $body['token'] ?? null),
                         'offeringId' => $body['offeringId'] ?? ($body['offering_id'] ?? null),
                         'packageId' => $body['packageId'] ?? ($body['package_id'] ?? null),
                         'priceId' => $body['priceId'] ?? ($body['price_id'] ?? null),
@@ -277,7 +301,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                     $app['hostProxyService']->createMyXappPurchasePaymentSession([
                         'xappId' => $params['xappId'] ?? null,
                         'intentId' => $params['intentId'] ?? null,
-                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null, $body['token'] ?? null),
                         'returnUrl' => $body['returnUrl'] ?? ($body['return_url'] ?? null),
                         'cancelUrl' => $body['cancelUrl'] ?? ($body['cancel_url'] ?? null),
                         'xappsResume' => $body['xappsResume'] ?? ($body['xapps_resume'] ?? null),
@@ -313,7 +337,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
                     $app['hostProxyService']->finalizeMyXappPurchasePaymentSession([
                         'xappId' => $params['xappId'] ?? null,
                         'intentId' => $params['intentId'] ?? null,
-                        'token' => $query['token'] ?? ($body['token'] ?? null),
+                        'token' => xapps_backend_kit_read_execution_plane_token($request, $query['token'] ?? null, $body['token'] ?? null),
                     ]),
                     200,
                     xapps_backend_kit_host_api_cors_headers($request, $allowedOrigins),
