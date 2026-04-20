@@ -15,7 +15,7 @@ Use this when you want:
 - subject resolution
 - catalog/widget session minting
 - a PHP reference to mirror the Node host proxy starter
-- the local `POST /api/host-bootstrap` bridge for hosted-integrator mode
+- the local `POST /api/browser/host-bootstrap` bridge for hosted-integrator mode
 
 This maps to the `minimal embed` backend profile:
 

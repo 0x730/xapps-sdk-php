@@ -8,15 +8,32 @@ PHP backend SDK for tenant, publisher, and host-proxy integrations.
 composer require xapps-platform/xapps-php
 ```
 
-Use `xapps-platform/xapps-php` when you want lower-level PHP primitives for gateway, callback, payment-return, publisher-admin, or host-proxy flows.
+## Fast Start For Hosted Integrators
 
-If you want a higher-level packaged backend contract with default routes and mode assembly, use `xapps-platform/xapps-backend-kit` instead.
+If your browser already uses `@xapps-platform/browser-host`, the minimum PHP or
+Laravel backend job is one local route:
+
+- `POST /api/browser/host-bootstrap`
+
+That local browser-safe route forwards identity input to the remote tenant backend and returns
+resolved `subjectId` + short-lived `bootstrapToken`.
+
+Start here:
+
+- [packages/xapps-php/examples/host-proxy/hosted-integrator-bootstrap.php](/home/dacrise/x/xapps/packages/xapps-php/examples/host-proxy/hosted-integrator-bootstrap.php)
+- [apps/tenants/docs/tooling/first-hosted-tenant-integrator-handoff.md](/home/dacrise/x/xapps/apps/tenants/docs/tooling/first-hosted-tenant-integrator-handoff.md)
+
+Use `xapps-platform/xapps-php` for lower-level PHP primitives for gateway,
+callback, payment-return, publisher-admin, or host-proxy flows.
+
+If you want a higher-level packaged backend contract with default routes and
+mode assembly, use `xapps-platform/xapps-backend-kit` instead.
 
 For the current XMS system behavior and API reader path, read:
 
 - [docs/specifications/xms/README.md](/home/dacrise/x/xapps/docs/specifications/xms/README.md)
 
-## Browser + backend SDK split
+## Browser + Backend SDK Split
 
 For the full embed contract:
 
@@ -28,7 +45,7 @@ Use this package when the browser already runs `@xapps-platform/browser-host`
 or `@xapps-platform/embed-sdk` and the backend needs to proxy the host/session
 contract to the gateway or tenant backend.
 
-## Scope (MVP)
+## Scope
 
 - Dispatch payload parsing (`Xapps\\Dispatch::parseRequest`)
 - Request signature verification (`Xapps\\Signature::verifyXappsSignature`)

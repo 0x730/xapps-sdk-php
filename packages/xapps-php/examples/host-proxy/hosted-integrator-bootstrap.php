@@ -117,6 +117,10 @@ If the integrator later stores the returned platform `subjectId`, it may include
 
 The local route forwards the same identity payload to:
 
+  POST {XAPPS_HOST_PUBLIC_URL}/api/browser/host-bootstrap
+
+The local browser-safe route forwards to:
+
   POST {XAPPS_TENANT_BASE_URL}/api/host-bootstrap
 
 with:
