@@ -186,6 +186,7 @@ final class EmbedHostProxyService
         return $this->gatewayClient->createCatalogSession([
             'origin' => $this->requireTrimmedString($input['origin'] ?? null, 'origin'),
             'subjectId' => $this->optionalString($input['subjectId'] ?? null),
+            'hostSessionJti' => $this->optionalString($input['hostSessionJti'] ?? null),
             'xappId' => $this->optionalString($input['xappId'] ?? null),
             'publishers' => is_array($input['publishers'] ?? null) ? $input['publishers'] : null,
             'tags' => is_array($input['tags'] ?? null) ? $input['tags'] : null,
@@ -204,6 +205,7 @@ final class EmbedHostProxyService
             'origin' => $this->requireTrimmedString($input['origin'] ?? null, 'origin'),
             'xappId' => $this->optionalString($input['xappId'] ?? null),
             'subjectId' => $this->optionalString($input['subjectId'] ?? null),
+            'hostSessionJti' => $this->optionalString($input['hostSessionJti'] ?? null),
             'requestId' => $this->optionalString($input['requestId'] ?? null),
             'hostReturnUrl' => $this->optionalString($input['hostReturnUrl'] ?? null),
             'resultPresentation' => $this->optionalString($input['resultPresentation'] ?? null),
@@ -224,12 +226,24 @@ final class EmbedHostProxyService
             'widgetId' => $this->requireTrimmedString($input['widgetId'] ?? null, 'widgetId'),
             'origin' => $this->requireTrimmedString($input['origin'] ?? null, 'origin'),
             'subjectId' => $this->optionalString($input['subjectId'] ?? null),
+            'hostSessionJti' => $this->optionalString($input['hostSessionJti'] ?? null),
             'hostReturnUrl' => $this->optionalString($input['hostReturnUrl'] ?? null),
         ]);
         return [
             'token' => $this->requireTrimmedString($result['token'] ?? null, 'token'),
             'expires_in' => $this->tokenRefreshTtlSeconds,
         ];
+    }
+
+    /** @param array<string,mixed> $input @return array{ok:bool,status:string,ttlSeconds:int} */
+    public function reportHostSessionRevocation(array $input): array
+    {
+        return $this->gatewayClient->reportHostSessionRevocation([
+            'hostSessionJti' => $this->requireTrimmedString($input['hostSessionJti'] ?? null, 'hostSessionJti'),
+            'exp' => isset($input['exp']) ? (int) $input['exp'] : 0,
+            'revokedAt' => isset($input['revokedAt']) ? (int) $input['revokedAt'] : null,
+            'source' => $this->optionalString($input['source'] ?? null),
+        ]);
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */

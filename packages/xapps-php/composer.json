@@ -1,6 +1,6 @@
 {
   "name": "xapps-platform/xapps-php",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "PHP SDK for Xapps publisher/tenant backend integrations",
   "type": "library",
   "license": "MIT",

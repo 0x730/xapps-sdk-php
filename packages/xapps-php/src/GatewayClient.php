@@ -250,6 +250,7 @@ final class GatewayClient
         $response = $this->post('/v1/catalog-sessions', self::withoutNullValues([
             'origin' => $origin,
             'subjectId' => isset($input['subjectId']) ? (string) $input['subjectId'] : null,
+            'host_session_jti' => isset($input['hostSessionJti']) ? (string) $input['hostSessionJti'] : null,
             'xappId' => isset($input['xappId']) ? (string) $input['xappId'] : null,
             'publishers' => $publishers,
             'tags' => $tags,
@@ -272,6 +273,31 @@ final class GatewayClient
         return [
             'token' => $token,
             'embedUrl' => $embedUrl,
+        ];
+    }
+
+    /** @param array<string,mixed> $input @return array{ok:bool,status:string,ttlSeconds:int} */
+    public function reportHostSessionRevocation(array $input): array
+    {
+        $hostSessionJti = trim((string) ($input['hostSessionJti'] ?? ''));
+        $exp = isset($input['exp']) ? (int) $input['exp'] : 0;
+        if ($hostSessionJti === '' || $exp <= 0) {
+            throw new XappsSdkError(
+                XappsSdkError::INVALID_ARGUMENT,
+                'hostSessionJti and exp are required',
+            );
+        }
+        $response = $this->post('/v1/host-sessions/revocations', self::withoutNullValues([
+            'host_session_jti' => $hostSessionJti,
+            'exp' => $exp,
+            'revoked_at' => isset($input['revokedAt']) ? (int) $input['revokedAt'] : null,
+            'source' => isset($input['source']) ? trim((string) $input['source']) : null,
+        ]));
+        $payload = $this->extractGatewayResult($response, 'reportHostSessionRevocation');
+        return [
+            'ok' => (bool) ($payload['ok'] ?? false),
+            'status' => trim((string) ($payload['status'] ?? 'revoked')) ?: 'revoked',
+            'ttlSeconds' => (int) ($payload['ttl_seconds'] ?? 0),
         ];
     }
 
@@ -321,6 +347,7 @@ final class GatewayClient
             'locale' => isset($input['locale']) ? (string) $input['locale'] : null,
             'xappId' => isset($input['xappId']) ? (string) $input['xappId'] : null,
             'subjectId' => isset($input['subjectId']) ? (string) $input['subjectId'] : null,
+            'host_session_jti' => isset($input['hostSessionJti']) ? (string) $input['hostSessionJti'] : null,
             'requestId' => isset($input['requestId']) ? (string) $input['requestId'] : null,
             'hostReturnUrl' => isset($input['hostReturnUrl']) ? (string) $input['hostReturnUrl'] : null,
             'resultPresentation' => isset($input['resultPresentation']) ? (string) $input['resultPresentation'] : null,
