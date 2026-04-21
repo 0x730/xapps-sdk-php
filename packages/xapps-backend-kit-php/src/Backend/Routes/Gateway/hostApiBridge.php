@@ -8,14 +8,18 @@ function xapps_backend_kit_register_host_api_bridge(array &$routes, array $app, 
         'method' => 'POST',
         'path' => '/api/bridge/token-refresh',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/bridge/token-refresh');
             try {
                 $input = xapps_backend_kit_bridge_refresh_input(xapps_backend_kit_read_record($request['body']), $request);
                 $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
                 if (($bootstrapContext['subjectId'] ?? null) !== null) {
                     $input['subjectId'] = $bootstrapContext['subjectId'];
+                }
+                if (($bootstrapContext['jti'] ?? null) !== null) {
+                    $input['hostSessionJti'] = xapps_backend_kit_optional_string($bootstrapContext['jti'] ?? null);
                 }
                 xapps_backend_kit_send_json(
                     $app['hostProxyService']->refreshWidgetToken($input),
@@ -32,9 +36,10 @@ function xapps_backend_kit_register_host_api_bridge(array &$routes, array $app, 
         'method' => 'POST',
         'path' => '/api/bridge/sign',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/bridge/sign');
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $authContext = xapps_backend_kit_read_host_auth_context($request, $session);
@@ -64,9 +69,10 @@ function xapps_backend_kit_register_host_api_bridge(array &$routes, array $app, 
         'method' => 'POST',
         'path' => '/api/bridge/vendor-assertion',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/bridge/vendor-assertion');
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $authContext = xapps_backend_kit_read_host_auth_context($request, $session);

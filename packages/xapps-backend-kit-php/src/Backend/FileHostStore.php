@@ -107,13 +107,13 @@ final class BackendFileHostStore
                     return (int) ($next[$jti] ?? 0) > $now;
                 });
             },
-            'revoke' => static function (array $input = []) use ($revocationsFile): bool {
+            'revoke' => static function (array $input = []) use ($revocationsFile, $stateFile): bool {
                 $jti = trim((string) ($input['jti'] ?? ''));
                 if ($revocationsFile === '' || $jti === '') {
                     return false;
                 }
 
-                return self::withLockedJsonState($revocationsFile, static function (array $current, callable $writeState) use ($jti, $input): bool {
+                $revoked = self::withLockedJsonState($revocationsFile, static function (array $current, callable $writeState) use ($jti, $input): bool {
                     $now = time();
                     $next = self::pruneJtiExpirations($current, $now);
                     $exp = is_numeric($input['exp'] ?? null) ? (int) $input['exp'] : 0;
@@ -121,6 +121,22 @@ final class BackendFileHostStore
                     $writeState($next);
                     return true;
                 });
+                if ($revoked && $stateFile !== '') {
+                    self::withLockedJsonState($stateFile, static function (array $current, callable $writeState) use ($jti): bool {
+                        $now = time();
+                        $next = self::pruneSessionAbsoluteExpirations($current, $now);
+                        if (array_key_exists($jti, $next)) {
+                            unset($next[$jti]);
+                            $writeState($next);
+                            return true;
+                        }
+                        if (count($next) !== count($current)) {
+                            $writeState($next);
+                        }
+                        return true;
+                    });
+                }
+                return $revoked;
             },
         ];
     }
@@ -133,13 +149,21 @@ final class BackendFileHostStore
             });
         }
         $directory = dirname($resolvedFilePath);
-        if (!is_dir($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
-            throw new \RuntimeException('Unable to create host state directory');
+        $previousUmask = umask(0077);
+        try {
+            if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+                throw new \RuntimeException('Unable to create host state directory');
+            }
+        } finally {
+            umask($previousUmask);
         }
+        $previousUmask = umask(0077);
         $handle = fopen($resolvedFilePath, 'c+');
+        umask($previousUmask);
         if ($handle === false) {
             throw new \RuntimeException('Unable to open host state file');
         }
+        @chmod($resolvedFilePath, 0600);
         try {
             if (!flock($handle, LOCK_EX)) {
                 throw new \RuntimeException('Unable to lock host state file');

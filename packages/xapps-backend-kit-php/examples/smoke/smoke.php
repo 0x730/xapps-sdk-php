@@ -21,6 +21,15 @@ function assertTrue(bool $value, string $message): void
 
 echo "xapps-backend-kit smoke: start\n";
 
+$stateDir = sys_get_temp_dir() . '/xapps-backend-kit-smoke-' . bin2hex(random_bytes(6));
+$bootstrapReplay = BackendKit::createFileHostBootstrapReplayConsumer([
+    'replayFile' => $stateDir . '/host-bootstrap-replay.json',
+]);
+$sessionStore = BackendKit::createFileHostSessionStore([
+    'stateFile' => $stateDir . '/host-session-state.json',
+    'revocationsFile' => $stateDir . '/host-session-revocations.json',
+]);
+
 $request = BackendKit::createRequestContext([
     'REQUEST_METHOD' => 'GET',
     'REQUEST_URI' => '/health?ok=1',
@@ -37,14 +46,11 @@ $normalized = BackendKit::normalizeOptions([
             'apiKeys' => 'key_a,key_b',
             'signingSecret' => 'bootstrap_secret',
             'ttlSeconds' => 300,
+            'consumeJti' => $bootstrapReplay,
         ],
         'session' => [
             'signingSecret' => 'session_secret',
-            'store' => [
-                'isRevoked' => static fn (): bool => false,
-                'revoke' => static function (): void {
-                },
-            ],
+            'store' => $sessionStore,
         ],
     ],
     'payments' => [

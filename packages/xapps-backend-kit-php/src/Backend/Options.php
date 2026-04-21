@@ -210,6 +210,11 @@ final class BackendOptions
                 'host.session.store.touch is required when host.session.idleTtlSeconds is configured'
             );
         }
+        if ($apiKeys !== [] && !is_callable($bootstrap['consumeJti'] ?? null)) {
+            throw new \InvalidArgumentException(
+                'host.bootstrap.consumeJti is required when host.bootstrap.apiKeys is configured'
+            );
+        }
     }
 
     public static function normalizeOptions(array $options = [], array $deps = []): array
@@ -260,6 +265,15 @@ final class BackendOptions
                     'consumeJti' => self::pickCallable(
                         $bootstrap['consumeJti'] ?? null,
                     ),
+                    'rateLimitBootstrap' => self::pickCallable(
+                        $bootstrap['rateLimitBootstrap'] ?? null,
+                    ),
+                    'auditBootstrap' => self::pickCallable(
+                        $bootstrap['auditBootstrap'] ?? null,
+                    ),
+                    'deprecatedWarn' => self::pickCallable(
+                        $bootstrap['deprecatedWarn'] ?? null,
+                    ) ?: (($bootstrap['deprecatedWarn'] ?? false) === true),
                 ],
                 'session' => [
                     'signingSecret' => trim(BackendSupport::readString($session['signingSecret'] ?? null)),
@@ -272,7 +286,7 @@ final class BackendOptions
                             ? (($session['idleTtlSeconds'] ?? null) ?? 0)
                             : 0
                     ),
-                    'cookiePath' => trim(BackendSupport::readString($session['cookiePath'] ?? null, '/')) ?: '/',
+                    'cookiePath' => trim(BackendSupport::readString($session['cookiePath'] ?? null, '/api')) ?: '/api',
                     'cookieDomain' => trim(BackendSupport::readString($session['cookieDomain'] ?? null)),
                     'cookieSameSite' => self::normalizeCookieSameSite(
                         $session['cookieSameSite'] ?? null,
@@ -302,8 +316,17 @@ final class BackendOptions
                     'rateLimitExchange' => self::pickCallable(
                         $session['rateLimitExchange'] ?? null,
                     ),
+                    'rateLimitLogout' => self::pickCallable(
+                        $session['rateLimitLogout'] ?? null,
+                    ),
                     'auditExchange' => self::pickCallable(
                         $session['auditExchange'] ?? null,
+                    ),
+                    'auditLogout' => self::pickCallable(
+                        $session['auditLogout'] ?? null,
+                    ),
+                    'auditRevocation' => self::pickCallable(
+                        $session['auditRevocation'] ?? null,
                     ),
                 ],
             ],

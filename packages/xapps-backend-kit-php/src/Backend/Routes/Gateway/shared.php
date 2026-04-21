@@ -31,6 +31,40 @@ function xapps_backend_kit_optional_string(mixed ...$values): ?string
     return $resolved !== '' ? $resolved : null;
 }
 
+function xapps_backend_kit_run_hook_safely(array $request, mixed $hook, array $input, string $label): void
+{
+    if (!is_callable($hook)) {
+        return;
+    }
+    try {
+        $hook($input);
+    } catch (\Throwable $error) {
+        error_log($label . ': ' . $error->getMessage());
+    }
+}
+
+function xapps_backend_kit_warn_deprecated_host_bootstrap_header(array $bootstrap, array $request, string $route): void
+{
+    $token = trim((string) ($request['headers']['x-xapps-host-bootstrap'] ?? ''));
+    if ($token === '') {
+        return;
+    }
+    $message = 'host bootstrap header is deprecated outside /api/host-session/exchange and will be removed';
+    $warnHook = $bootstrap['deprecatedWarn'] ?? null;
+    if (is_callable($warnHook)) {
+        xapps_backend_kit_run_hook_safely($request, $warnHook, [
+            'request' => $request,
+            'route' => $route,
+            'headerName' => 'x-xapps-host-bootstrap',
+            'message' => $message,
+        ], 'host-bootstrap deprecated warning hook failed');
+        return;
+    }
+    if ($warnHook === true) {
+        error_log($message . ' route=' . $route . ' headerName=x-xapps-host-bootstrap');
+    }
+}
+
 function xapps_backend_kit_normalize_origin(mixed $value): string
 {
     $resolved = trim((string) ($value ?? ''));
@@ -177,8 +211,8 @@ function xapps_backend_kit_resolve_host_session_idle_ttl_seconds(array $session 
 
 function xapps_backend_kit_resolve_host_session_cookie_path(array $session = []): string
 {
-    $cookiePath = trim((string) ($session['cookiePath'] ?? '/'));
-    return $cookiePath !== '' ? $cookiePath : '/';
+    $cookiePath = trim((string) ($session['cookiePath'] ?? '/api'));
+    return $cookiePath !== '' ? $cookiePath : '/api';
 }
 
 function xapps_backend_kit_resolve_host_session_cookie_domain(array $session = []): string
@@ -251,7 +285,7 @@ function xapps_backend_kit_verify_host_bootstrap_token(string $token, array $boo
     if (trim((string) ($payload['type'] ?? '')) !== 'host_bootstrap') {
         throw new XappsSdkError(XappsSdkError::GATEWAY_API_UNAUTHORIZED, 'host bootstrap token type is invalid', 401, false);
     }
-    if ((int) ($payload['v'] ?? 0) !== 1) {
+    if ((int) ($payload['v'] ?? 0) !== 2) {
         throw new XappsSdkError(XappsSdkError::GATEWAY_API_UNAUTHORIZED, 'host bootstrap token version is invalid', 401, false);
     }
     if (trim((string) ($payload['iss'] ?? '')) !== 'xapps_host_bootstrap') {
@@ -289,7 +323,7 @@ function xapps_backend_kit_verify_host_session_token(string $token, array $sessi
     if (trim((string) ($payload['type'] ?? '')) !== 'host_session') {
         throw new XappsSdkError(XappsSdkError::GATEWAY_API_UNAUTHORIZED, 'host session token type is invalid', 401, false);
     }
-    if ((int) ($payload['v'] ?? 0) !== 1) {
+    if ((int) ($payload['v'] ?? 0) !== 2) {
         throw new XappsSdkError(XappsSdkError::GATEWAY_API_UNAUTHORIZED, 'host session token version is invalid', 401, false);
     }
     if (trim((string) ($payload['iss'] ?? '')) !== 'xapps_host_session') {
@@ -329,8 +363,6 @@ function xapps_backend_kit_read_host_bootstrap_context(array $request, array $bo
     }
     return [
         'subjectId' => xapps_backend_kit_optional_string($payload['subjectId'] ?? null),
-        'email' => xapps_backend_kit_optional_string($payload['email'] ?? null),
-        'name' => xapps_backend_kit_optional_string($payload['name'] ?? null),
         'origin' => $tokenOrigin !== '' ? $tokenOrigin : null,
         'jti' => xapps_backend_kit_optional_string($payload['jti'] ?? null),
         'iat' => is_numeric($payload['iat'] ?? null) ? (int) $payload['iat'] : null,
@@ -526,8 +558,6 @@ function xapps_backend_kit_read_host_session_context(
     }
     return [
         'subjectId' => xapps_backend_kit_optional_string($payload['subjectId'] ?? null),
-        'email' => xapps_backend_kit_optional_string($payload['email'] ?? null),
-        'name' => xapps_backend_kit_optional_string($payload['name'] ?? null),
         'sessionMode' => 'host_session',
         'jti' => xapps_backend_kit_optional_string($payload['jti'] ?? null),
         'iat' => is_numeric($payload['iat'] ?? null) ? (int) $payload['iat'] : null,
@@ -681,26 +711,31 @@ function xapps_backend_kit_build_host_bootstrap_result(array $input): array
     $subjectId = xapps_backend_kit_read_string($input['subjectId'] ?? null);
     $email = xapps_backend_kit_optional_string($input['email'] ?? null);
     $name = xapps_backend_kit_optional_string($input['name'] ?? null);
+    $signingKeyId = xapps_backend_kit_optional_string($input['signingKeyId'] ?? null);
     $origin = xapps_backend_kit_normalize_origin($input['origin'] ?? null);
     $ttlSeconds = (int) ($input['ttlSeconds'] ?? 300);
     $ttlSeconds = $ttlSeconds > 0 ? $ttlSeconds : 300;
     $now = time();
-    $bootstrapToken = xapps_backend_kit_issue_host_bootstrap_token([
-        'v' => 1,
+    $bootstrapPayload = [
+        'v' => 2,
         'type' => 'host_bootstrap',
         'iss' => 'xapps_host_bootstrap',
         'aud' => 'xapps_host_api',
-        'kid' => xapps_backend_kit_optional_string($input['signingKeyId'] ?? null),
         'jti' => function_exists('random_bytes')
             ? bin2hex(random_bytes(16))
             : sha1((string) microtime(true) . ':' . (string) mt_rand()),
         'subjectId' => $subjectId,
-        'email' => $email,
-        'name' => $name,
         'origin' => $origin,
         'iat' => $now,
         'exp' => $now + $ttlSeconds,
-    ], xapps_backend_kit_read_string($input['signingSecret'] ?? null));
+    ];
+    if (is_string($signingKeyId) && trim($signingKeyId) !== '') {
+        $bootstrapPayload['kid'] = trim($signingKeyId);
+    }
+    $bootstrapToken = xapps_backend_kit_issue_host_bootstrap_token(
+        $bootstrapPayload,
+        xapps_backend_kit_read_string($input['signingSecret'] ?? null),
+    );
     return [
         'subjectId' => $subjectId,
         'email' => $email,
@@ -721,28 +756,27 @@ function xapps_backend_kit_build_host_session_exchange_result(array $input, arra
             false,
         );
     }
-    $email = xapps_backend_kit_optional_string($input['email'] ?? null);
-    $name = xapps_backend_kit_optional_string($input['name'] ?? null);
+    $signingKeyId = xapps_backend_kit_optional_string($input['signingKeyId'] ?? null);
     $session = xapps_backend_kit_read_record($input['session'] ?? null);
     $ttlSeconds = (int) ($input['ttlSeconds'] ?? xapps_backend_kit_resolve_host_session_absolute_ttl_seconds($session));
     $ttlSeconds = $ttlSeconds > 0 ? $ttlSeconds : xapps_backend_kit_resolve_host_session_absolute_ttl_seconds($session);
     $cookieName = xapps_backend_kit_resolve_host_session_cookie_name($session);
     $now = time();
     $sessionPayload = [
-        'v' => 1,
+        'v' => 2,
         'type' => 'host_session',
         'iss' => 'xapps_host_session',
         'aud' => 'xapps_host_api',
-        'kid' => xapps_backend_kit_optional_string($input['signingKeyId'] ?? null),
         'jti' => function_exists('random_bytes')
             ? bin2hex(random_bytes(16))
             : sha1((string) microtime(true) . ':' . (string) mt_rand()),
         'subjectId' => $subjectId,
-        'email' => $email,
-        'name' => $name,
         'iat' => $now,
         'exp' => $now + $ttlSeconds,
     ];
+    if (is_string($signingKeyId) && trim($signingKeyId) !== '') {
+        $sessionPayload['kid'] = trim($signingKeyId);
+    }
     $sessionToken = xapps_backend_kit_issue_host_session_token(
         $sessionPayload,
         xapps_backend_kit_read_string($input['signingSecret'] ?? null),
@@ -823,6 +857,21 @@ function xapps_backend_kit_enforce_host_api_origin(array $request, array $allowe
     return false;
 }
 
+function xapps_backend_kit_enforce_browser_unsafe_host_api_origin(array $request, array $allowedOrigins = []): bool
+{
+    $origin = xapps_backend_kit_request_origin($request);
+    if ($origin === '') {
+        xapps_backend_kit_send_json(['message' => 'Origin is required'], 403);
+        return false;
+    }
+    return xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins);
+}
+
+function xapps_backend_kit_enforce_cookie_unsafe_host_api_origin(array $request, array $allowedOrigins = []): bool
+{
+    return xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins);
+}
+
 function xapps_backend_kit_send_host_api_preflight(array $request, array $allowedOrigins = []): void
 {
     $origin = xapps_backend_kit_request_origin($request);
@@ -850,6 +899,9 @@ function xapps_backend_kit_widget_session_input(array $body, array $request): ar
         'widgetId' => xapps_backend_kit_read_string($body['widgetId'] ?? null),
         'xappId' => xapps_backend_kit_optional_string($body['xappId'] ?? null),
         'subjectId' => xapps_backend_kit_optional_string($body['subjectId'] ?? null),
+        'hostSessionJti' => xapps_backend_kit_optional_string(
+            $body['host_session_jti'] ?? null,
+        ),
         'requestId' => xapps_backend_kit_optional_string($body['requestId'] ?? null),
         'origin' => xapps_backend_kit_read_string($body['origin'] ?? null, $request['headers']['origin'] ?? null),
         'hostReturnUrl' => xapps_backend_kit_optional_string(
@@ -897,6 +949,9 @@ function xapps_backend_kit_bridge_refresh_input(array $body, array $request): ar
         'installationId' => xapps_backend_kit_read_string($body['installationId'] ?? null),
         'widgetId' => xapps_backend_kit_read_string($body['widgetId'] ?? null),
         'subjectId' => xapps_backend_kit_optional_string($body['subjectId'] ?? null),
+        'hostSessionJti' => xapps_backend_kit_optional_string(
+            $body['host_session_jti'] ?? null,
+        ),
         'origin' => xapps_backend_kit_read_string($body['origin'] ?? null, $request['headers']['origin'] ?? null),
         'hostReturnUrl' => xapps_backend_kit_optional_string(
             $body['hostReturnUrl'] ?? null,

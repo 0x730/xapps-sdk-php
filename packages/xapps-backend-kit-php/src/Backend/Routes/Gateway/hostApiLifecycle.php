@@ -11,6 +11,7 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
             if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/installations');
             try {
                 $query = xapps_backend_kit_read_record($request['query']);
                 $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
@@ -37,9 +38,10 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
         'method' => 'POST',
         'path' => '/api/install',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/install');
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
@@ -68,9 +70,10 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
         'method' => 'POST',
         'path' => '/api/update',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/update');
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);
@@ -99,9 +102,10 @@ function xapps_backend_kit_register_host_api_lifecycle(array &$routes, array $ap
         'method' => 'POST',
         'path' => '/api/uninstall',
         'handler' => static function (array $request) use ($app, $allowedOrigins, $bootstrap, $session): void {
-            if (!xapps_backend_kit_enforce_host_api_origin($request, $allowedOrigins)) {
+            if (!xapps_backend_kit_enforce_browser_unsafe_host_api_origin($request, $allowedOrigins)) {
                 return;
             }
+            xapps_backend_kit_warn_deprecated_host_bootstrap_header($bootstrap, $request, '/api/uninstall');
             try {
                 $body = xapps_backend_kit_read_record($request['body']);
                 $bootstrapContext = xapps_backend_kit_read_host_auth_context($request, $session);

@@ -11,6 +11,7 @@ use Xapps\PaymentHandler;
 
 require_once __DIR__ . '/Backend/Support.php';
 require_once __DIR__ . '/Backend/FileHostStore.php';
+require_once __DIR__ . '/Backend/RedisHostStore.php';
 require_once __DIR__ . '/Backend/Options.php';
 require_once __DIR__ . '/Backend/Runtime.php';
 require_once __DIR__ . '/Backend/Modules.php';
@@ -74,6 +75,16 @@ final class BackendKit
     public static function createFileHostSessionStore(array $config = []): array
     {
         return BackendFileHostStore::createFileHostSessionStore($config);
+    }
+
+    public static function createRedisHostBootstrapReplayConsumer(array $config = []): callable
+    {
+        return BackendRedisHostStore::createRedisHostBootstrapReplayConsumer($config);
+    }
+
+    public static function createRedisHostSessionStore(array $config = []): array
+    {
+        return BackendRedisHostStore::createRedisHostSessionStore($config);
     }
 
     public static function bootstrap(array $config, array $options = [], array $deps = []): array

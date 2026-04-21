@@ -91,6 +91,7 @@ return [
                     'bootstrap' => [
                         'apiKeys' => ['bootstrap_key_123'],
                         'signingSecret' => 'bootstrap_secret_123',
+                        'consumeJti' => static fn (): bool => true,
                     ],
                     'session' => [
                         'signingSecret' => 'session_secret_123',
@@ -200,6 +201,128 @@ return [
                 @unlink($revocationsFile);
                 @rmdir($tempDir);
             }
+        },
+    ],
+    [
+        'name' => 'backend kit prevents fallback touch from resurrecting revoked redis host sessions',
+        'run' => static function (): void {
+            $client = new class () {
+                public bool $injectRevocationOnNextStateSet = false;
+                public string $raceStateKey = '';
+                public string $raceRevokedKey = '';
+                /** @var array<string, array{value: string, expiresAt: int}> */
+                private array $entries = [];
+
+                private function nowSeconds(): int
+                {
+                    return time();
+                }
+
+                private function prune(): void
+                {
+                    $now = $this->nowSeconds();
+                    foreach ($this->entries as $key => $entry) {
+                        if (($entry['expiresAt'] ?? 0) > 0 && (int) $entry['expiresAt'] <= $now) {
+                            unset($this->entries[$key]);
+                        }
+                    }
+                }
+
+                public function set(mixed $key, mixed $value, mixed ...$args): string
+                {
+                    $this->prune();
+                    $normalizedKey = trim((string) $key);
+                    if ($normalizedKey === '') {
+                        return '';
+                    }
+                    $ttlSeconds = 0;
+                    if (count($args) === 1 && is_array($args[0])) {
+                        $ttlSeconds = is_numeric($args[0]['ex'] ?? null) ? (int) $args[0]['ex'] : 0;
+                    } else {
+                        for ($index = 0; $index < count($args); $index += 1) {
+                            $token = strtoupper(trim((string) ($args[$index] ?? '')));
+                            if ($token === 'EX') {
+                                $ttlSeconds = is_numeric($args[$index + 1] ?? null) ? (int) $args[$index + 1] : 0;
+                                $index += 1;
+                            }
+                        }
+                    }
+                    if ($this->injectRevocationOnNextStateSet && $normalizedKey === $this->raceStateKey) {
+                        $this->injectRevocationOnNextStateSet = false;
+                        $this->entries[$this->raceRevokedKey] = [
+                            'value' => (string) ($this->nowSeconds() + 120),
+                            'expiresAt' => $this->nowSeconds() + 120,
+                        ];
+                    }
+                    $this->entries[$normalizedKey] = [
+                        'value' => (string) $value,
+                        'expiresAt' => $ttlSeconds > 0 ? $this->nowSeconds() + $ttlSeconds : 0,
+                    ];
+                    return 'OK';
+                }
+
+                public function get(string $key): ?string
+                {
+                    $this->prune();
+                    $normalizedKey = trim($key);
+                    if ($normalizedKey === '') {
+                        return null;
+                    }
+                    return $this->entries[$normalizedKey]['value'] ?? null;
+                }
+
+                public function del(string ...$keys): int
+                {
+                    $deleted = 0;
+                    foreach ($keys as $key) {
+                        $normalizedKey = trim($key);
+                        if ($normalizedKey !== '' && array_key_exists($normalizedKey, $this->entries)) {
+                            unset($this->entries[$normalizedKey]);
+                            $deleted += 1;
+                        }
+                    }
+                    return $deleted;
+                }
+
+                public function eval(mixed ...$args): mixed
+                {
+                    throw new RuntimeException('eval unavailable in test redis client');
+                }
+            };
+
+            $keyPrefix = 'xapps:host:race';
+            $store = \Xapps\BackendKit\BackendKit::createRedisHostSessionStore([
+                'client' => $client,
+                'keyPrefix' => $keyPrefix,
+            ]);
+
+            $jti = 'session_race_jti_123';
+            $exp = time() + 600;
+            $stateKey = $keyPrefix . ':session:state:' . $jti;
+            $revokedKey = $keyPrefix . ':session:revoked:' . $jti;
+
+            xappsBackendKitPhpAssertTrue(($store['activate'])(
+                [
+                    'jti' => $jti,
+                    'subjectId' => 'sub_123',
+                    'exp' => $exp,
+                    'idleTtlSeconds' => 120,
+                ]
+            ), 'redis session activate should succeed');
+
+            $client->raceStateKey = $stateKey;
+            $client->raceRevokedKey = $revokedKey;
+            $client->injectRevocationOnNextStateSet = true;
+
+            xappsBackendKitPhpAssertSame(false, ($store['touch'])(
+                [
+                    'jti' => $jti,
+                    'idleTtlSeconds' => 120,
+                ]
+            ), 'fallback redis touch should fail when revocation races');
+
+            xappsBackendKitPhpAssertTrue(($store['isRevoked'])(['jti' => $jti]), 'session should read as revoked');
+            xappsBackendKitPhpAssertSame(null, $client->get($stateKey), 'state key should be deleted after raced revocation');
         },
     ],
     [
@@ -375,7 +498,7 @@ return [
         'run' => static function (): void {
             $now = time();
             $wrongType = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'wrong_type',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'xapps_host_api',
@@ -404,7 +527,7 @@ return [
             }
 
             $wrongVersion = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 2,
+                'v' => 999,
                 'type' => 'host_bootstrap',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'xapps_host_api',
@@ -433,7 +556,7 @@ return [
             }
 
             $wrongIssuer = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_bootstrap',
                 'iss' => 'wrong_issuer',
                 'aud' => 'xapps_host_api',
@@ -462,7 +585,7 @@ return [
             }
 
             $wrongAudience = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_bootstrap',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'wrong_audience',
@@ -491,7 +614,7 @@ return [
             }
 
             $missingJti = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_bootstrap',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'xapps_host_api',
@@ -545,7 +668,7 @@ return [
         'run' => static function (): void {
             $now = time();
             $rotated = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_bootstrap',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'xapps_host_api',
@@ -573,7 +696,7 @@ return [
             xappsBackendKitPhpAssertSame('sub_123', $context['subjectId'] ?? null, 'rotated bootstrap subject mismatch');
 
             $unknownKid = xapps_backend_kit_issue_host_bootstrap_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_bootstrap',
                 'iss' => 'xapps_host_bootstrap',
                 'aud' => 'xapps_host_api',
@@ -653,7 +776,7 @@ return [
         'run' => static function (): void {
             $now = time();
             $rotated = xapps_backend_kit_issue_host_session_token([
-                'v' => 1,
+                'v' => 2,
                 'type' => 'host_session',
                 'iss' => 'xapps_host_session',
                 'aud' => 'xapps_host_api',
@@ -1252,6 +1375,282 @@ return [
                 str_contains((string) ($failureEvents[count($failureEvents) - 1]['reason'] ?? ''), 'Host session exchange rate limit exceeded'),
                 'failed exchange reason audit mismatch',
             );
+        },
+    ],
+    [
+        'name' => 'host bootstrap applies rate limiting and audits bootstrap attempts',
+        'run' => static function (): void {
+            $events = [];
+            $routes = [];
+            xapps_backend_kit_register_host_api_core($routes, [
+                'hostProxyService' => new class {
+                    public function getHostConfig(): array
+                    {
+                        return [];
+                    }
+
+                    public function resolveSubject(array $input): array
+                    {
+                        return [
+                            'subjectId' => 'sub_123',
+                            'email' => trim((string) ($input['email'] ?? '')) ?: null,
+                        ];
+                    }
+                },
+            ], ['https://host.example.test'], [
+                'apiKeys' => ['bootstrap_key_123'],
+                'signingSecret' => 'bootstrap_secret_123',
+                'consumeJti' => static fn (): bool => true,
+                'rateLimitBootstrap' => static fn (): bool => true,
+                'auditBootstrap' => static function (array $input) use (&$events): void {
+                    $events[] = $input;
+                },
+            ], [
+                'signingSecret' => 'session_secret_123',
+                'store' => [
+                    'isRevoked' => static fn (): bool => false,
+                    'revoke' => static fn (): bool => true,
+                ],
+            ]);
+
+            $route = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/host-bootstrap');
+            $success = xappsBackendKitPhpInvokeRoute($route['handler'], [
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'x-api-key' => 'bootstrap_key_123',
+                ],
+                'body' => [
+                    'origin' => 'https://host.example.test',
+                    'email' => 'u@example.test',
+                ],
+            ]);
+            xappsBackendKitPhpAssertSame(200, $success['status'], 'bootstrap success status mismatch');
+            xappsBackendKitPhpAssertSame(true, (bool) ($events[count($events) - 1]['ok'] ?? false), 'bootstrap success audit mismatch');
+
+            $failureEvents = [];
+            $failureRoutes = [];
+            xapps_backend_kit_register_host_api_core($failureRoutes, [
+                'hostProxyService' => new class {
+                    public function getHostConfig(): array
+                    {
+                        return [];
+                    }
+
+                    public function resolveSubject(array $input): array
+                    {
+                        return [
+                            'subjectId' => 'sub_123',
+                            'email' => trim((string) ($input['email'] ?? '')) ?: null,
+                        ];
+                    }
+                },
+            ], ['https://host.example.test'], [
+                'apiKeys' => ['bootstrap_key_123'],
+                'signingSecret' => 'bootstrap_secret_123',
+                'consumeJti' => static fn (): bool => true,
+                'rateLimitBootstrap' => static fn (): bool => false,
+                'auditBootstrap' => static function (array $input) use (&$failureEvents): void {
+                    $failureEvents[] = $input;
+                },
+            ], [
+                'signingSecret' => 'session_secret_123',
+                'store' => [
+                    'isRevoked' => static fn (): bool => false,
+                    'revoke' => static fn (): bool => true,
+                ],
+            ]);
+
+            $failureRoute = xappsBackendKitPhpFindRoute($failureRoutes, 'POST', '/api/host-bootstrap');
+            $failed = xappsBackendKitPhpInvokeRoute($failureRoute['handler'], [
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'x-api-key' => 'bootstrap_key_123',
+                ],
+                'body' => [
+                    'origin' => 'https://host.example.test',
+                    'email' => 'u@example.test',
+                ],
+            ]);
+            xappsBackendKitPhpAssertSame(500, $failed['status'], 'bootstrap rate limit status mismatch');
+            xappsBackendKitPhpAssertTrue(
+                str_contains((string) ($failureEvents[count($failureEvents) - 1]['reason'] ?? ''), 'Host bootstrap rate limit exceeded'),
+                'bootstrap rate limit reason mismatch',
+            );
+        },
+    ],
+    [
+        'name' => 'host session logout applies rate limiting and audits logout/revocation phases',
+        'run' => static function (): void {
+            $logoutEvents = [];
+            $revocationEvents = [];
+            $routes = [];
+            xapps_backend_kit_register_host_api_core($routes, [
+                'hostProxyService' => new class {
+                    public function getHostConfig(): array
+                    {
+                        return [];
+                    }
+
+                    public function reportHostSessionRevocation(array $input): array
+                    {
+                        throw new RuntimeException('gateway report failed');
+                    }
+                },
+            ], ['https://host.example.test'], [
+                'signingSecret' => 'bootstrap_secret_123',
+                'consumeJti' => static fn (): bool => true,
+            ], [
+                'signingSecret' => 'session_secret_123',
+                'rateLimitLogout' => static fn (): bool => true,
+                'auditLogout' => static function (array $input) use (&$logoutEvents): void {
+                    $logoutEvents[] = $input;
+                },
+                'auditRevocation' => static function (array $input) use (&$revocationEvents): void {
+                    $revocationEvents[] = $input;
+                },
+                'store' => [
+                    'isRevoked' => static fn (): bool => false,
+                    'revoke' => static fn (): bool => true,
+                ],
+            ]);
+
+            $route = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/host-session/logout');
+            $exchange = xapps_backend_kit_build_host_session_exchange_result([
+                'subjectId' => 'sub_logout_123',
+                'signingSecret' => 'session_secret_123',
+            ], [
+                'protocol' => 'https',
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'origin' => 'https://host.example.test',
+                ],
+            ]);
+            preg_match('/xapps_host_session=([^;]+)/', (string) ($exchange['setCookie'] ?? ''), $cookieMatch);
+            $token = isset($cookieMatch[1]) ? trim((string) $cookieMatch[1]) : '';
+            xappsBackendKitPhpAssertTrue($token !== '', 'missing host-session token');
+
+            $response = xappsBackendKitPhpInvokeRoute($route['handler'], [
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'origin' => 'https://host.example.test',
+                    'cookie' => 'xapps_host_session=' . $token,
+                ],
+            ]);
+            xappsBackendKitPhpAssertSame(200, $response['status'], 'logout success status mismatch');
+            xappsBackendKitPhpAssertSame(true, (bool) ($logoutEvents[count($logoutEvents) - 1]['ok'] ?? false), 'logout success audit mismatch');
+            $hasLocalRevoke = false;
+            $hasGatewayReportFailure = false;
+            foreach ($revocationEvents as $entry) {
+                if (($entry['phase'] ?? null) === 'local_revoke' && ($entry['ok'] ?? null) === true) {
+                    $hasLocalRevoke = true;
+                }
+                if (($entry['phase'] ?? null) === 'gateway_report' && ($entry['ok'] ?? null) === false) {
+                    $hasGatewayReportFailure = true;
+                }
+            }
+            xappsBackendKitPhpAssertSame(true, $hasLocalRevoke, 'missing local revoke audit');
+            xappsBackendKitPhpAssertSame(true, $hasGatewayReportFailure, 'missing gateway report failure audit');
+
+            $rateLimitedEvents = [];
+            $rateLimitedRoutes = [];
+            xapps_backend_kit_register_host_api_core($rateLimitedRoutes, [
+                'hostProxyService' => new class {
+                    public function getHostConfig(): array
+                    {
+                        return [];
+                    }
+                },
+            ], ['https://host.example.test'], [
+                'signingSecret' => 'bootstrap_secret_123',
+                'consumeJti' => static fn (): bool => true,
+            ], [
+                'signingSecret' => 'session_secret_123',
+                'rateLimitLogout' => static fn (): bool => false,
+                'auditLogout' => static function (array $input) use (&$rateLimitedEvents): void {
+                    $rateLimitedEvents[] = $input;
+                },
+                'store' => [
+                    'isRevoked' => static fn (): bool => false,
+                    'revoke' => static fn (): bool => true,
+                ],
+            ]);
+
+            $rateLimitedRoute = xappsBackendKitPhpFindRoute($rateLimitedRoutes, 'POST', '/api/host-session/logout');
+            $rateLimited = xappsBackendKitPhpInvokeRoute($rateLimitedRoute['handler'], [
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'origin' => 'https://host.example.test',
+                    'cookie' => 'xapps_host_session=' . $token,
+                ],
+            ]);
+            xappsBackendKitPhpAssertSame(500, $rateLimited['status'], 'logout rate limit status mismatch');
+            xappsBackendKitPhpAssertTrue(
+                str_contains((string) ($rateLimitedEvents[count($rateLimitedEvents) - 1]['reason'] ?? ''), 'Host session logout rate limit exceeded'),
+                'logout rate limit reason mismatch',
+            );
+        },
+    ],
+    [
+        'name' => 'deprecated host bootstrap header warning hook fires on non-exchange host routes',
+        'run' => static function (): void {
+            $warnings = [];
+            $routes = [];
+            xapps_backend_kit_register_host_api_core($routes, [
+                'hostProxyService' => new class {
+                    public function getHostConfig(): array
+                    {
+                        return [];
+                    }
+
+                    public function createCatalogSession(array $input): array
+                    {
+                        return ['token' => 'catalog_token', 'embedUrl' => '/embed/catalog?token=catalog_token'];
+                    }
+                },
+            ], ['https://host.example.test'], [
+                'signingSecret' => 'bootstrap_secret_123',
+                'consumeJti' => static fn (): bool => true,
+                'deprecatedWarn' => static function (array $input) use (&$warnings): void {
+                    $warnings[] = $input;
+                },
+            ], [
+                'signingSecret' => 'session_secret_123',
+                'store' => [
+                    'isRevoked' => static fn (): bool => false,
+                    'revoke' => static fn (): bool => true,
+                ],
+            ]);
+
+            $route = xappsBackendKitPhpFindRoute($routes, 'POST', '/api/create-catalog-session');
+            $exchange = xapps_backend_kit_build_host_session_exchange_result([
+                'subjectId' => 'sub_warn_123',
+                'signingSecret' => 'session_secret_123',
+            ], [
+                'protocol' => 'https',
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'origin' => 'https://host.example.test',
+                ],
+            ]);
+            preg_match('/xapps_host_session=([^;]+)/', (string) ($exchange['setCookie'] ?? ''), $cookieMatch);
+            $token = isset($cookieMatch[1]) ? trim((string) $cookieMatch[1]) : '';
+            xappsBackendKitPhpAssertTrue($token !== '', 'missing host-session token');
+
+            $response = xappsBackendKitPhpInvokeRoute($route['handler'], [
+                'headers' => [
+                    'host' => 'tenant.example.test',
+                    'origin' => 'https://host.example.test',
+                    'cookie' => 'xapps_host_session=' . $token,
+                    'x-xapps-host-bootstrap' => 'deprecated-token-value',
+                ],
+                'body' => [
+                    'origin' => 'https://host.example.test',
+                    'xappId' => 'xapp_123',
+                ],
+            ]);
+            xappsBackendKitPhpAssertSame(201, $response['status'], 'deprecated warning catalog status mismatch');
+            xappsBackendKitPhpAssertSame(1, count($warnings), 'deprecated warning hook count mismatch');
+            xappsBackendKitPhpAssertSame('/api/create-catalog-session', $warnings[0]['route'] ?? null, 'deprecated warning route mismatch');
         },
     ],
     [
