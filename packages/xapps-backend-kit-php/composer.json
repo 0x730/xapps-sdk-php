@@ -1,6 +1,6 @@
 {
   "name": "xapps-platform/xapps-backend-kit",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Modular PHP backend kit for the current Xapps backend contract (tenant surface today, shared actor-adapter direction later)",
   "type": "library",
   "license": "MIT",
@@ -10,9 +10,10 @@
     "xapps-platform/xapps-php": "^0.2.11"
   },
   "autoload": {
-    "psr-4": {
-      "Xapps\\BackendKit\\": "src/"
-    },
+    "classmap": [
+      "src/BackendKit.php",
+      "src/Backend"
+    ],
     "files": [
       "src/functions.php"
     ]
